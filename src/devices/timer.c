@@ -30,6 +30,9 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
+// OUR CODE
+static struct semaphore alarm_sem;
+
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
@@ -37,6 +40,7 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+  sema_init(&alarm_sem, 0);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -89,11 +93,11 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
-  int64_t start = timer_ticks ();
+  //int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  sema_down(&alarm_sem);
+  list_begin(&(alarm_sem.waiters))->ticks_left = ticks;
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -170,7 +174,26 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
+
   ticks++;
+  struct list all_threads = alarm_sem.waiters;
+  struct list_elem *tail = list_tail(&all_threads);
+  struct list_elem *current = list_head(&all_threads);
+  if(current == NULL || current->prev == NULL || current->next == NULL){
+    //printf("Shit's null\n");
+    thread_tick();
+    return;
+  }
+  int64_t ticks_remain;
+   while((current = list_next(current)) != tail) {
+    ticks_remain = current->ticks_left;
+    ticks_remain = ticks_remain-1;
+    printf("ticks_remain = %d\n",(int)ticks_remain);
+    if(ticks_remain <= 0){
+      current->ticks_left = 0;
+      sema_up(&alarm_sem);
+    }
+  }
   thread_tick ();
 }
 
