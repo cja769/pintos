@@ -8,4 +8,7 @@ Constant subroutine SIGVTALRM redefined at /lusr/opt/pintos//pintos line 926.
 00000000000e[     ] user_shortcut: old-style syntax detected
 00000000000i[     ] installing nogui module as the Bochs GUI
 00000000000i[     ] using log file bochsout.txt
-Use of uninitialized value in numeric le (<=) at /lusr/opt/pintos//pintos line 829.
+========================================================================
+Bochs is exiting with the following message:
+[UNMP ] Shutdown port: shutdown requested
+========================================================================
