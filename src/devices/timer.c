@@ -31,7 +31,8 @@ static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
 // OUR CODE
-static struct semaphore alarm_sem;
+//static struct semaphore alarm_sem;
+struct list asleep_threads;
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
@@ -40,7 +41,9 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
-  sema_init(&alarm_sem, 0);
+  //printf("Before asleep_threads Initialized\n");
+  list_init(&asleep_threads);
+  //printf("After asleep_threads Initialized\n");
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -96,8 +99,11 @@ timer_sleep (int64_t ticks)
   //int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  sema_down(&alarm_sem);
-  list_begin(&(alarm_sem.waiters))->ticks_left = ticks;
+  struct thread *current = thread_current();
+  sema_init(&(current->sleep_sem), 0);
+  current->ticks_left = ticks;
+  list_push_front(&asleep_threads, &(current->asleep_elem));
+  sema_down(&(current->sleep_sem));
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -176,22 +182,25 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
 
   ticks++;
-  struct list all_threads = alarm_sem.waiters;
-  struct list_elem *tail = list_tail(&all_threads);
-  struct list_elem *current = list_head(&all_threads);
-  if(current == NULL || current->prev == NULL || current->next == NULL){
-    //printf("Shit's null\n");
+  struct list_elem *tail = list_tail(&asleep_threads);
+  struct list_elem *current = list_head(&asleep_threads);
+  struct thread *current_thread;
+  if(current == NULL || current->prev != NULL || current->next == NULL){
     thread_tick();
     return;
   }
   int64_t ticks_remain;
-   while((current = list_next(current)) != tail) {
-    ticks_remain = current->ticks_left;
+  while((current = list_next(current)) != tail) {
+    current_thread = list_entry(current,struct thread, asleep_elem);
+    ticks_remain = current_thread->ticks_left;
     ticks_remain = ticks_remain-1;
-    printf("ticks_remain = %d\n",(int)ticks_remain);
     if(ticks_remain <= 0){
-      current->ticks_left = 0;
-      sema_up(&alarm_sem);
+      current_thread->ticks_left = 0;
+      sema_up(&(current_thread->sleep_sem));
+      list_remove(current);
+    }
+    else{
+      current_thread->ticks_left = ticks_remain;
     }
   }
   thread_tick ();
