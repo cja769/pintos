@@ -30,7 +30,7 @@
 00000000000i[     ]   SB16 support: no
 00000000000i[     ]   USB support: no
 00000000000i[     ]   VGA extension support:  
-00000000000i[MEM0 ] allocated memory at 0x7fe3696f3010. after alignment, vector=0x7fe3696f4000
+00000000000i[MEM0 ] allocated memory at 0x7f4694869010. after alignment, vector=0x7f469486a000
 00000000000i[MEM0 ] 4.00MB
 00000000000i[MEM0 ] rom at 0xffff0000/65536 ('/lusr/opt/boch-2.2.6-pintos/share/bochs/BIOS-bochs-latest')
 00000000000i[MEM0 ] rom at 0xc0000/32768 ('/lusr/opt/boch-2.2.6-pintos/share/bochs/VGABIOS-lgpl-latest')
@@ -48,7 +48,7 @@
 00000000000i[     ] init_mem of 'extfpuirq' plugin device by virtual method
 00000000000i[     ] init_mem of 'speaker' plugin device by virtual method
 00000000000i[     ] init_dev of 'harddrv' plugin device by virtual method
-00000000000i[HD   ] HD on ata0-0: '/tmp/Ub81tbruMa.dsk' 'flat' mode 
+00000000000i[HD   ] HD on ata0-0: '/tmp/WYUIL2o7MK.dsk' 'flat' mode 
 00000000000i[HD   ] Using boot sequence disk, none, none
 00000000000i[HD   ] Floppy boot signature check is enabled
 00000000000i[     ] init_dev of 'keyboard' plugin device by virtual method
@@ -89,3 +89,28 @@
 00000786523e[HD   ] ata0: device set to 1 which does not exist
 00000786815e[HD   ] ata1: device set to 0 which does not exist
 00000787108e[HD   ] ata1: device set to 1 which does not exist
+22245320961p[     ] >>PANIC<< SIGNAL 2 caught
+22245320961i[SYS  ] Last time is 22245
+22245320961i[XGUI ] Exit.
+22245320961i[CPU  ] protected mode
+22245320961i[CPU  ] CS.d_b = 32 bit
+22245320961i[CPU  ] SS.d_b = 32 bit
+22245320961i[CPU  ] | EAX=c0103000  EBX=c00211bb  ECX=c0103000  EDX=00000001
+22245320961i[CPU  ] | ESP=c0103fc8  EBP=c0103fd0  ESI=00000000  EDI=00000000
+22245320961i[CPU  ] | IOPL=0 id vip vif ac vm rf nt of df IF tf SF zf af pf cf
+22245320961i[CPU  ] | SEG selector     base    limit G D
+22245320961i[CPU  ] | SEG sltr(index|ti|rpl)     base    limit G D
+22245320961i[CPU  ] |  CS:0008( 0001| 0|  0) 00000000 000fffff 1 1
+22245320961i[CPU  ] |  DS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+22245320961i[CPU  ] |  SS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+22245320961i[CPU  ] |  ES:0010( 0002| 0|  0) 00000000 000fffff 1 1
+22245320961i[CPU  ] |  FS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+22245320961i[CPU  ] |  GS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+22245320961i[CPU  ] | EIP=c00211e2 (c00211e2)
+22245320961i[CPU  ] | CR0=0x80010015 CR1=0 CR2=0x00000000
+22245320961i[CPU  ] | CR3=0x00101000 CR4=0x00000000
+22245320961i[CPU  ] >> eb
+22245320961i[CPU  ] >> f2
+22245320961i[CPU  ] >> : jmp .+0xfffffff2
+22245320961i[     ] restoring default signal behavior
+22245320961i[CTRL ] quit_sim called with exit code 1
