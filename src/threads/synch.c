@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "threads/interrupt.h"
+//#include "threads/thread.c"
 #include "threads/thread.h"
 
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
@@ -68,7 +69,7 @@ sema_down (struct semaphore *sema)
   old_level = intr_disable ();
   while (sema->value == 0) 
     {
-      list_push_back (&sema->waiters, &thread_current ()->elem);
+      list_insert_ordered (&sema->waiters, &thread_current ()->elem, &less, NULL);
       thread_block ();
     }
   sema->value--;

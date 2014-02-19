@@ -79,7 +79,7 @@ less(const struct list_elem *a,
 {
   struct thread *insert_thread = list_entry(a, struct thread, elem);
   struct thread *list_thread = list_entry(b, struct thread, elem);
-  printf("List_thread: %d, insert_thread: %d\n", list_thread->priority, insert_thread->priority);
+//  printf("List_thread: %d, insert_thread: %d\n", list_thread->priority, insert_thread->priority);
   if(list_thread->priority < insert_thread->priority) 
     return true;
   return false;
@@ -223,6 +223,10 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  struct thread *cur_thread = thread_current ();
+  if (cur_thread->priority < t->priority)
+    thread_yield();
+
   return tid;
 }
 
@@ -361,6 +365,9 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  struct thread *next_thread = next_thread_to_run();
+  if (new_priority < next_thread->priority)
+    thread_yield();
 }
 
 /* Returns the current thread's priority. */
@@ -583,6 +590,14 @@ schedule (void)
   if (cur != next)
     prev = switch_threads (cur, next);
   thread_schedule_tail (prev);
+
+  struct list_elem *e;
+  printf("\n[");
+  for (e = list_begin (&ready_list); e != list_end (&ready_list); e = list_next (e)) {
+    struct thread *t = list_entry(e, struct thread, elem);
+     printf("%s: %d, ", t->name, t->priority);
+   }
+   printf("]\n");
 }
 
 /* Returns a tid to use for a new thread. */
