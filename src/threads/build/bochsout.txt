@@ -30,7 +30,7 @@
 00000000000i[     ]   SB16 support: no
 00000000000i[     ]   USB support: no
 00000000000i[     ]   VGA extension support:  
-00000000000i[MEM0 ] allocated memory at 0x7f04631cb010. after alignment, vector=0x7f04631cc000
+00000000000i[MEM0 ] allocated memory at 0x7f7259f63010. after alignment, vector=0x7f7259f64000
 00000000000i[MEM0 ] 4.00MB
 00000000000i[MEM0 ] rom at 0xffff0000/65536 ('/lusr/opt/boch-2.2.6-pintos/share/bochs/BIOS-bochs-latest')
 00000000000i[MEM0 ] rom at 0xc0000/32768 ('/lusr/opt/boch-2.2.6-pintos/share/bochs/VGABIOS-lgpl-latest')
@@ -48,7 +48,7 @@
 00000000000i[     ] init_mem of 'extfpuirq' plugin device by virtual method
 00000000000i[     ] init_mem of 'speaker' plugin device by virtual method
 00000000000i[     ] init_dev of 'harddrv' plugin device by virtual method
-00000000000i[HD   ] HD on ata0-0: '/tmp/NH20s5OxCF.dsk' 'flat' mode 
+00000000000i[HD   ] HD on ata0-0: '/tmp/Hk35hUT8Xy.dsk' 'flat' mode 
 00000000000i[HD   ] Using boot sequence disk, none, none
 00000000000i[HD   ] Floppy boot signature check is enabled
 00000000000i[     ] init_dev of 'keyboard' plugin device by virtual method
@@ -76,43 +76,42 @@
 00000200000e[VGA  ] character height = 1, skipping text update
 00000240000e[VGA  ] character height = 1, skipping text update
 00000280000e[VGA  ] character height = 1, skipping text update
-00000317563i[KBD  ] reset-disable command received
 00000320000e[VGA  ] character height = 1, skipping text update
 00000360000e[VGA  ] character height = 1, skipping text update
 00000400000e[VGA  ] character height = 1, skipping text update
-00000425250i[VBIOS] VGABios $Id: vgabios.c,v 1.63 2005/12/26 19:50:26 vruppert Exp $
-00000428257i[VBIOS] VBE Bios $Id: vbe.c,v 1.48 2005/12/26 19:50:26 vruppert Exp $
+00000422040i[KBD  ] reset-disable command received
 00000440000e[VGA  ] character height = 1, skipping text update
-00000480000i[XGUI ] charmap update. Font Height is 16
-00000520000i[XGUI ] charmap update. Font Height is 16
-00000737822i[BIOS ] ata0-0: PCHS=1/16/63 translation=none LCHS=1/16/63
-00000786523e[HD   ] ata0: device set to 1 which does not exist
-00000786815e[HD   ] ata1: device set to 0 which does not exist
-00000787108e[HD   ] ata1: device set to 1 which does not exist
-00276073193p[     ] >>PANIC<< SIGNAL 2 caught
-00276073193i[SYS  ] Last time is 276
-00276073193i[XGUI ] Exit.
-00276073193i[CPU  ] protected mode
-00276073193i[CPU  ] CS.d_b = 32 bit
-00276073193i[CPU  ] SS.d_b = 32 bit
-00276073193i[CPU  ] | EAX=00000000  EBX=c0103028  ECX=c0103028  EDX=00000000
-00276073193i[CPU  ] | ESP=c0103c98  EBP=c0103cc0  ESI=c0033f70  EDI=c0103028
-00276073193i[CPU  ] | IOPL=0 id vip vif ac vm rf nt of df if tf SF zf af PF CF
-00276073193i[CPU  ] | SEG selector     base    limit G D
-00276073193i[CPU  ] | SEG sltr(index|ti|rpl)     base    limit G D
-00276073193i[CPU  ] |  CS:0008( 0001| 0|  0) 00000000 000fffff 1 1
-00276073193i[CPU  ] |  DS:0010( 0002| 0|  0) 00000000 000fffff 1 1
-00276073193i[CPU  ] |  SS:0010( 0002| 0|  0) 00000000 000fffff 1 1
-00276073193i[CPU  ] |  ES:0010( 0002| 0|  0) 00000000 000fffff 1 1
-00276073193i[CPU  ] |  FS:0010( 0002| 0|  0) 00000000 000fffff 1 1
-00276073193i[CPU  ] |  GS:0010( 0002| 0|  0) 00000000 000fffff 1 1
-00276073193i[CPU  ] | EIP=c0028cb9 (c0028cb9)
-00276073193i[CPU  ] | CR0=0x80010015 CR1=0 CR2=0x00000000
-00276073193i[CPU  ] | CR3=0x00101000 CR4=0x00000000
-00276073193i[CPU  ] >> 89
-00276073193i[CPU  ] >> 44
-00276073193i[CPU  ] >> 24
-00276073193i[CPU  ] >> 08
-00276073193i[CPU  ] >> : mov dword ptr ss:[esp+0x8], eax
-00276073193i[     ] restoring default signal behavior
-00276073193i[CTRL ] quit_sim called with exit code 1
+00000480000e[VGA  ] character height = 1, skipping text update
+00000520000e[VGA  ] character height = 1, skipping text update
+00000529765i[VBIOS] VGABios $Id: vgabios.c,v 1.63 2005/12/26 19:50:26 vruppert Exp $
+00000532772i[VBIOS] VBE Bios $Id: vbe.c,v 1.48 2005/12/26 19:50:26 vruppert Exp $
+00000600000i[XGUI ] charmap update. Font Height is 16
+00000842337i[BIOS ] ata0-0: PCHS=1/16/63 translation=none LCHS=1/16/63
+00000891038e[HD   ] ata0: device set to 1 which does not exist
+00000891330e[HD   ] ata1: device set to 0 which does not exist
+00000891623e[HD   ] ata1: device set to 1 which does not exist
+03807637000p[XGUI ] >>PANIC<< POWER button turned off.
+03807637000i[SYS  ] Last time is 3807
+03807637000i[XGUI ] Exit.
+03807637000i[CPU  ] protected mode
+03807637000i[CPU  ] CS.d_b = 32 bit
+03807637000i[CPU  ] SS.d_b = 32 bit
+03807637000i[CPU  ] | EAX=c0103000  EBX=c00211b0  ECX=c0103000  EDX=00000001
+03807637000i[CPU  ] | ESP=c0103fc8  EBP=c0103fd0  ESI=00000000  EDI=00000000
+03807637000i[CPU  ] | IOPL=0 id vip vif ac vm rf nt of df IF tf SF zf af pf cf
+03807637000i[CPU  ] | SEG selector     base    limit G D
+03807637000i[CPU  ] | SEG sltr(index|ti|rpl)     base    limit G D
+03807637000i[CPU  ] |  CS:0008( 0001| 0|  0) 00000000 000fffff 1 1
+03807637000i[CPU  ] |  DS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+03807637000i[CPU  ] |  SS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+03807637000i[CPU  ] |  ES:0010( 0002| 0|  0) 00000000 000fffff 1 1
+03807637000i[CPU  ] |  FS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+03807637000i[CPU  ] |  GS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+03807637000i[CPU  ] | EIP=c00211d7 (c00211d7)
+03807637000i[CPU  ] | CR0=0x80010015 CR1=0 CR2=0x00000000
+03807637000i[CPU  ] | CR3=0x00101000 CR4=0x00000000
+03807637000i[CPU  ] >> eb
+03807637000i[CPU  ] >> f2
+03807637000i[CPU  ] >> : jmp .+0xfffffff2
+03807637000i[     ] restoring default signal behavior
+03807637000i[CTRL ] quit_sim called with exit code 1

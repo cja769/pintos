@@ -365,7 +365,7 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
-  struct thread *next_thread = next_thread_to_run();
+  struct thread *next_thread = list_entry(list_begin(&ready_list), struct thread, elem);
   if (new_priority < next_thread->priority)
     thread_yield();
 }
@@ -592,12 +592,12 @@ schedule (void)
   thread_schedule_tail (prev);
 
   struct list_elem *e;
-  printf("\n[");
-  for (e = list_begin (&ready_list); e != list_end (&ready_list); e = list_next (e)) {
-    struct thread *t = list_entry(e, struct thread, elem);
-     printf("%s: %d, ", t->name, t->priority);
-   }
-   printf("]\n");
+  // printf("\n[");
+  // for (e = list_begin (&ready_list); e != list_end (&ready_list); e = list_next (e)) {
+  //   struct thread *t = list_entry(e, struct thread, elem);
+  //    printf("%s: %d, ", t->name, t->priority);
+  //  }
+  //  printf("]\n");
 }
 
 /* Returns a tid to use for a new thread. */
