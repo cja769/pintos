@@ -71,6 +71,8 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
+struct lock set_pri_lock;
+
 /* less function for insert ordering */
 bool
 less(const struct list_elem *a,
@@ -394,11 +396,17 @@ thread_foreach (thread_action_func *func, void *aux)
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
-{
+{ 
+  enum intr_level old_level;
+  old_level = intr_disable ();
+
   thread_current ()->priority = new_priority;
   struct thread *next_thread = list_entry(list_begin(&ready_list), struct thread, elem);
-  if (new_priority < next_thread->priority)
+  if (new_priority < next_thread->priority){
+    intr_set_level (old_level);
     thread_yield();
+  }
+  intr_set_level (old_level);
 }
 
 /* Returns the current thread's priority. */
@@ -527,7 +535,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority_array[0] = priority;
   t->index = 0;
   t->waiting_on = NULL;
-  // t->locks_held = 0;
+  t->locks_held = 0;
   list_push_back(&all_list, &t->allelem);
 }
 

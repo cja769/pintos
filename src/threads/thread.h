@@ -111,7 +111,7 @@ struct thread
 
     int priority_array[20];
     int index;
-    // int locks_held;
+    int locks_held;
    // struct list all_priorities;
 
     struct thread *waiting_on;

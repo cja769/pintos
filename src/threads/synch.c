@@ -208,15 +208,20 @@ lock_acquire_help (struct lock *lock){
   int farthest_pri;
   int alm_farth_pri;
     while((farthest = almost_farthest->waiting_on) != NULL){
+        //printf("%s is farthest\t%s is almost_farthest\n",farthest->name,almost_farthest->name);
+        //printf("%s is farthest and has priority %d\n",farthest->name,farthest->priority);
         alm_farth_pri = original_pri;
         farthest_pri = farthest->priority;
       if(alm_farth_pri > farthest_pri){
-        //printf("HI!\n");
-        farthest->index += 1;
+        farthest->locks_held++;
+        //printf("locks = %d\n",farthest->locks_held);
+        farthest->index++;
         farthest->priority_array[farthest->index] = original_pri;
         farthest->priority = original_pri;
+        // printf("original = %d\n",original_pri);
+        // printf("\nalm_farth_pri = %d\nfarthest_pri = %d\n",alm_farth_pri,farthest_pri);
+        //printf("%s index = %d\n",farthest->name,farthest->index);
       }
-      else break;
       almost_farthest = farthest;
     }
 }
@@ -237,13 +242,13 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
   // enum intr_level old_level;
   // old_level = intr_disable ();
+  if(lock->holder != NULL){
+    lock_acquire_help (lock);
+  }
+  sema_down (&lock->semaphore);
+  lock->holder = thread_current();
 
-  if(!lock_try_acquire(lock)){
-      lock_acquire_help (lock);
-      sema_down (&lock->semaphore);
-      lock->holder = thread_current();
-    }
-  // thread_current()->locks_held++;
+ // thread_current()->locks_held++;
 
   // intr_set_level (old_level);
   
@@ -280,15 +285,31 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  struct thread* hold = lock->holder;
-  if(hold->index > 0){
-    hold->index -= 1;
-    hold->priority = hold->priority_array[hold->index];
+  struct thread* cur = thread_current();
+  int original = cur->priority;
+  int new = -1;
+  //printf("locks_held = %d\n")
+  if((cur->index) > 0 && (cur->locks_held) > 0){
+    // printf("IN HERE\n");
+    //printf("locks held = %d\n", cur->locks_held);
+    cur->locks_held--;
+    // printf("index = %d\n", hold->index);
+    // printf("priority was %d", hold->priority);
+    cur->index -= 1;
+    new = cur->priority_array[cur->index];
+    //printf(" and now it is %d\n", new);
   }
- // printf("\nhold name = %s\n hold index = %d \nhold priority %d\n", hold->name, hold->index, hold->priority);
-  hold->waiting_on = NULL;
+  else if((cur->index) > 0){
+    cur->index = 0;
+    new = cur->priority_array[cur->index];
+  }
+  //printf("\ncur name = %s\n cur index = %d \ncur priority %d\n", cur->name, cur->index, cur->priority);
   lock->holder = NULL;
   sema_up (&lock->semaphore);
+  if(new > -1){
+    thread_set_priority(new);
+  }
+
 }
 
 /* Returns true if the current thread holds LOCK, false
