@@ -20,6 +20,9 @@
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
+int thread_num[13];
+int indexInd = 1;
+
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
@@ -39,6 +42,7 @@ struct list asleep_threads;
 void
 timer_init (void) 
 {
+  thread_num[0] = 31;
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
   //printf("Before asleep_threads Initialized\n");
@@ -180,7 +184,18 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-
+  // int i;
+  // int found = 0;
+  // int pri = thread_get_priority();
+  // for(i = 0; i < indexInd; i++){
+  //   if(pri == thread_num[i])
+  //     found = 1;
+  // }
+  // if(!found){
+  //   printf("\t\tcurrent thread has priority %d\n",thread_get_priority());
+  //   thread_num[indexInd] = pri;
+  //   indexInd++;
+  // }
   ticks++;
   struct list_elem *tail = list_tail(&asleep_threads);
   struct list_elem *current = list_head(&asleep_threads);

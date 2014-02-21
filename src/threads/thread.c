@@ -79,11 +79,41 @@ less(const struct list_elem *a,
 {
   struct thread *insert_thread = list_entry(a, struct thread, elem);
   struct thread *list_thread = list_entry(b, struct thread, elem);
-//  printf("List_thread: %d, insert_thread: %d\n", list_thread->priority, insert_thread->priority);
+  //printf("List_thread: %d, insert_thread: %d\n", list_thread->priority, insert_thread->priority);
   if(list_thread->priority < insert_thread->priority) 
     return true;
   return false;
 }
+
+bool
+sema_less(const struct list_elem *a,
+               const struct list_elem *b,
+               void *aux)
+{
+  struct thread *insert_thread = list_entry(a, struct thread, sema_elem);
+  struct thread *list_thread = list_entry(b, struct thread, sema_elem);
+  printf("List_thread: %d, insert_thread: %d\n", list_thread->priority, insert_thread->priority);
+  if(list_thread->priority < insert_thread->priority) {
+    printf("true\n");
+    return true;
+  }
+  return false;
+}
+
+bool
+condition_less(const struct list_elem *a,
+               const struct list_elem *b,
+               void *aux)
+{
+  struct semaphore_elem *insert = list_entry(a, struct semaphore_elem, elem);
+  struct semaphore_elem *list = list_entry(b, struct semaphore_elem, elem);
+  struct semaphore in = insert->semaphore; 
+  struct semaphore compare = list->semaphore;
+  struct list_elem *a_elem = list_front(&in.waiters);
+  struct list_elem *b_elem = list_front(&compare.waiters);
+  return sema_less(a_elem, b_elem, NULL);
+}
+
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -267,6 +297,7 @@ thread_unblock (struct thread *t)
   //list_push_back (&ready_list, &t->elem);
   list_insert_ordered (&ready_list, &t->elem, &less, NULL);
   t->status = THREAD_READY;
+
   intr_set_level (old_level);
 }
 
@@ -591,13 +622,6 @@ schedule (void)
     prev = switch_threads (cur, next);
   thread_schedule_tail (prev);
 
-  struct list_elem *e;
-  // printf("\n[");
-  // for (e = list_begin (&ready_list); e != list_end (&ready_list); e = list_next (e)) {
-  //   struct thread *t = list_entry(e, struct thread, elem);
-  //    printf("%s: %d, ", t->name, t->priority);
-  //  }
-  //  printf("]\n");
 }
 
 /* Returns a tid to use for a new thread. */

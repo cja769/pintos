@@ -101,6 +101,8 @@ struct thread
     int64_t ticks_left;
     struct semaphore sleep_sem; 
 
+    struct list_elem sema_elem;
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -117,6 +119,12 @@ extern bool thread_mlfqs;
 
 bool
 less(const struct list_elem *a, const struct list_elem *b, void *aux);
+
+bool
+sema_less(const struct list_elem *a, const struct list_elem *b, void *aux);
+
+bool
+condition_less(const struct list_elem *a, const struct list_elem *b, void *aux);
 
 void thread_init (void);
 void thread_start (void);
