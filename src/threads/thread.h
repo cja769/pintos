@@ -15,6 +15,12 @@ enum thread_status
     THREAD_DYING        /* About to be destroyed. */
   };
 
+struct priority_elem
+  {
+    struct list_elem elem;
+    int priority;
+  };
+
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
@@ -102,6 +108,13 @@ struct thread
     struct semaphore sleep_sem; 
 
     struct list_elem sema_elem;
+
+    int priority_array[20];
+    int index;
+    // int locks_held;
+   // struct list all_priorities;
+
+    struct thread *waiting_on;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

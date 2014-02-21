@@ -198,6 +198,29 @@ lock_init (struct lock *lock)
   sema_init (&lock->semaphore, 1);
 }
 
+void
+lock_acquire_help (struct lock *lock){
+  struct thread *farthest;
+  struct thread *almost_farthest = thread_current();
+  int original_pri = almost_farthest->priority;
+  farthest = lock->holder;
+  almost_farthest->waiting_on = farthest;
+  int farthest_pri;
+  int alm_farth_pri;
+    while((farthest = almost_farthest->waiting_on) != NULL){
+        alm_farth_pri = original_pri;
+        farthest_pri = farthest->priority;
+      if(alm_farth_pri > farthest_pri){
+        //printf("HI!\n");
+        farthest->index += 1;
+        farthest->priority_array[farthest->index] = original_pri;
+        farthest->priority = original_pri;
+      }
+      else break;
+      almost_farthest = farthest;
+    }
+}
+
 /* Acquires LOCK, sleeping until it becomes available if
    necessary.  The lock must not already be held by the current
    thread.
@@ -212,18 +235,18 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
+  // enum intr_level old_level;
+  // old_level = intr_disable ();
 
-  // if(!lock_try_acquire(lock)){
-  //   int this_thread_pri = thread_get_priority();
-  //   int holder_pri = lock->holder->priority;
-  //   if(this_thread_pri > holder_pri){
-  //     lock->holder->
-  //   }
-  //   else{
+  if(!lock_try_acquire(lock)){
+      lock_acquire_help (lock);
       sema_down (&lock->semaphore);
-  //   } 
-  // }
-  lock->holder = thread_current ();
+      lock->holder = thread_current();
+    }
+  // thread_current()->locks_held++;
+
+  // intr_set_level (old_level);
+  
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -257,6 +280,13 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
+  struct thread* hold = lock->holder;
+  if(hold->index > 0){
+    hold->index -= 1;
+    hold->priority = hold->priority_array[hold->index];
+  }
+ // printf("\nhold name = %s\n hold index = %d \nhold priority %d\n", hold->name, hold->index, hold->priority);
+  hold->waiting_on = NULL;
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
@@ -317,8 +347,8 @@ cond_wait (struct condition *cond, struct lock *lock)
   
   sema_init (&waiter.semaphore, 0);
   list_push_back (&cond->waiters, &waiter.elem);
-  //list_insert_ordered(&cond->waiters, &waiter.elem, &less, NULL);
   lock_release (lock);
+  list_sort (&cond->waiters, &condition_less, NULL);
   sema_down (&waiter.semaphore);
   list_sort (&cond->waiters, &condition_less, NULL);
   lock_acquire (lock);

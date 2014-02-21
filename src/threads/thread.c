@@ -92,9 +92,7 @@ sema_less(const struct list_elem *a,
 {
   struct thread *insert_thread = list_entry(a, struct thread, sema_elem);
   struct thread *list_thread = list_entry(b, struct thread, sema_elem);
-  printf("List_thread: %d, insert_thread: %d\n", list_thread->priority, insert_thread->priority);
   if(list_thread->priority < insert_thread->priority) {
-    printf("true\n");
     return true;
   }
   return false;
@@ -227,6 +225,8 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
+// printf("priority is actually = %d\n",priority);
+//printf("priority = %d\n", t->priority_array[t->index]);
 
   /* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
@@ -524,6 +524,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+  t->priority_array[0] = priority;
+  t->index = 0;
+  t->waiting_on = NULL;
+  // t->locks_held = 0;
   list_push_back(&all_list, &t->allelem);
 }
 

@@ -1,7 +1,5 @@
 #include "list.h"
 #include "../debug.h"
-#include <stdio.h>
-
 /* Our doubly linked lists have two header elements: the "head"
    just before the first element and the "tail" just after the
    last element.  The `prev' link of the front header is null, as
@@ -343,8 +341,7 @@ static bool
 is_sorted (struct list_elem *a, struct list_elem *b,
            list_less_func *less, void *aux)
 {
-  printf("inside is_sorted\n");
-  if (a != b){
+    if (a != b){
     while ((a = list_next (a)) != b) {
       if (less (a, list_prev (a), aux))
         return false;
