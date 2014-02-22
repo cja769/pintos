@@ -102,6 +102,7 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+    /* Calvin driving */
     /* for timer portion */
     struct list_elem asleep_elem;
     int64_t ticks_left;
@@ -109,11 +110,10 @@ struct thread
 
     struct list_elem sema_elem;
 
+    /* for priority donation */
     int priority_array[20];
     int index;
-    int locks_held;
-   // struct list all_priorities;
-
+    struct lock *wait_lock;
     struct thread *waiting_on;
 
 #ifdef USERPROG

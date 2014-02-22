@@ -66,19 +66,13 @@ sema_init (struct semaphore *sema, unsigned value)
 void
 sema_down (struct semaphore *sema) 
 {  
-  // struct list_elem *e;
-  // msg("\n[");
-  // for (e = list_begin (&sema->waiters); e != list_end (&sema->waiters); e = list_next (e)) {
-  //   struct thread *t = list_entry(e, struct thread, asleep_elem);
-  //   msg("%s, %d, ",t->name, t->priority);
-  //  }
-  // msg("]\n");
   enum intr_level old_level;
   ASSERT (sema != NULL);
   ASSERT (!intr_context ());
   old_level = intr_disable ();
   while (sema->value == 0) 
     {
+      /* Calvin driving */
       list_insert_ordered (&sema->waiters, &thread_current ()->sema_elem, &sema_less, NULL);
       thread_block ();
     }
@@ -124,12 +118,15 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
   struct thread *t;
   old_level = intr_disable ();
+
+  /*Samantha driving */
   if (!list_empty (&sema->waiters)) {
      t =(list_entry (list_pop_front (&sema->waiters),
                                 struct thread, sema_elem));
   thread_unblock(t);
   }
   sema->value++;
+  /*End Samantha driving, Calvin driving now */
   if(t != NULL && old_level == INTR_ON)
     if(t->priority > thread_get_priority())
       thread_yield();
@@ -196,31 +193,32 @@ lock_init (struct lock *lock)
 
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
+  lock->donation = 0;
 }
 
 void
 lock_acquire_help (struct lock *lock){
+  /* Samantha driving */
   struct thread *farthest;
   struct thread *almost_farthest = thread_current();
   int original_pri = almost_farthest->priority;
   farthest = lock->holder;
   almost_farthest->waiting_on = farthest;
+  almost_farthest->wait_lock = lock;
   int farthest_pri;
   int alm_farth_pri;
+  /* End Samantha driving, Calvin driving now */
     while((farthest = almost_farthest->waiting_on) != NULL){
-        //printf("%s is farthest\t%s is almost_farthest\n",farthest->name,almost_farthest->name);
-        //printf("%s is farthest and has priority %d\n",farthest->name,farthest->priority);
         alm_farth_pri = original_pri;
         farthest_pri = farthest->priority;
       if(alm_farth_pri > farthest_pri){
-        farthest->locks_held++;
-        //printf("locks = %d\n",farthest->locks_held);
+        if(farthest->wait_lock != NULL)
+          (farthest->wait_lock)->donation += 1;
+        else
+          lock->donation += 1;
         farthest->index++;
         farthest->priority_array[farthest->index] = original_pri;
         farthest->priority = original_pri;
-        // printf("original = %d\n",original_pri);
-        // printf("\nalm_farth_pri = %d\nfarthest_pri = %d\n",alm_farth_pri,farthest_pri);
-        //printf("%s index = %d\n",farthest->name,farthest->index);
       }
       almost_farthest = farthest;
     }
@@ -240,17 +238,11 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
-  // enum intr_level old_level;
-  // old_level = intr_disable ();
   if(lock->holder != NULL){
     lock_acquire_help (lock);
   }
   sema_down (&lock->semaphore);
   lock->holder = thread_current();
-
- // thread_current()->locks_held++;
-
-  // intr_set_level (old_level);
   
 }
 
@@ -285,25 +277,14 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
+  /* Calvin driving */
   struct thread* cur = thread_current();
-  int original = cur->priority;
   int new = -1;
-  //printf("locks_held = %d\n")
-  if((cur->index) > 0 && (cur->locks_held) > 0){
-    // printf("IN HERE\n");
-    //printf("locks held = %d\n", cur->locks_held);
-    cur->locks_held--;
-    // printf("index = %d\n", hold->index);
-    // printf("priority was %d", hold->priority);
-    cur->index -= 1;
-    new = cur->priority_array[cur->index];
-    //printf(" and now it is %d\n", new);
-  }
-  else if((cur->index) > 0){
-    cur->index = 0;
+  if((cur->index) > 0 && lock->donation){
+    cur->index -= lock->donation;
     new = cur->priority_array[cur->index];
   }
-  //printf("\ncur name = %s\n cur index = %d \ncur priority %d\n", cur->name, cur->index, cur->priority);
+  lock->donation = 0;
   lock->holder = NULL;
   sema_up (&lock->semaphore);
   if(new > -1){
@@ -354,7 +335,7 @@ cond_init (struct condition *cond)
 
    This function may sleep, so it must not be called within an
    interrupt handler.  This function may be called with
-   interrupts disabled, but interrupts will be turned back on if
+   interrupts disabled, but interrupts will be turned back on i
    we need to sleep. */
 void
 cond_wait (struct condition *cond, struct lock *lock) 
@@ -366,12 +347,11 @@ cond_wait (struct condition *cond, struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (lock_held_by_current_thread (lock));
   
+  /*Samantha driving */
   sema_init (&waiter.semaphore, 0);
-  list_push_back (&cond->waiters, &waiter.elem);
+  list_insert_ordered (&cond->waiters, &waiter.elem, &condition_less, NULL);
   lock_release (lock);
-  list_sort (&cond->waiters, &condition_less, NULL);
   sema_down (&waiter.semaphore);
-  list_sort (&cond->waiters, &condition_less, NULL);
   lock_acquire (lock);
 }
 

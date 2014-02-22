@@ -33,8 +33,7 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
-// OUR CODE
-//static struct semaphore alarm_sem;
+/*Calvin driving*/
 struct list asleep_threads;
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
@@ -45,9 +44,8 @@ timer_init (void)
   thread_num[0] = 31;
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
-  //printf("Before asleep_threads Initialized\n");
+  /* Calvin driving */
   list_init(&asleep_threads);
-  //printf("After asleep_threads Initialized\n");
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -100,8 +98,7 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
-  //int64_t start = timer_ticks ();
-
+  /* Calvin driving */
   ASSERT (intr_get_level () == INTR_ON);
   struct thread *current = thread_current();
   sema_init(&(current->sleep_sem), 0);
@@ -184,18 +181,7 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-  // int i;
-  // int found = 0;
-  // int pri = thread_get_priority();
-  // for(i = 0; i < indexInd; i++){
-  //   if(pri == thread_num[i])
-  //     found = 1;
-  // }
-  // if(!found){
-  //   printf("\t\tcurrent thread has priority %d\n",thread_get_priority());
-  //   thread_num[indexInd] = pri;
-  //   indexInd++;
-  // }
+  /* Samantha driving */
   ticks++;
   struct list_elem *tail = list_tail(&asleep_threads);
   struct list_elem *current = list_head(&asleep_threads);
@@ -205,6 +191,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
     return;
   }
   int64_t ticks_remain;
+
+  /*End of Samantha driving, Calvin driving now */
   while((current = list_next(current)) != tail) {
     current_thread = list_entry(current,struct thread, asleep_elem);
     ticks_remain = current_thread->ticks_left;

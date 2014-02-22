@@ -73,11 +73,12 @@ static tid_t allocate_tid (void);
 
 struct lock set_pri_lock;
 
-/* less function for insert ordering */
+/*Samantha drivinf */
+/* less function for ready list ordering */
 bool
 less(const struct list_elem *a,
                const struct list_elem *b,
-               void *aux)
+               void *aux UNUSED)
 {
   struct thread *insert_thread = list_entry(a, struct thread, elem);
   struct thread *list_thread = list_entry(b, struct thread, elem);
@@ -87,10 +88,11 @@ less(const struct list_elem *a,
   return false;
 }
 
+/* less function for sema list ordering */
 bool
 sema_less(const struct list_elem *a,
                const struct list_elem *b,
-               void *aux)
+               void *aux UNUSED)
 {
   struct thread *insert_thread = list_entry(a, struct thread, sema_elem);
   struct thread *list_thread = list_entry(b, struct thread, sema_elem);
@@ -100,16 +102,15 @@ sema_less(const struct list_elem *a,
   return false;
 }
 
+/* less function for condvar list ordering */
 bool
-condition_less(const struct list_elem *a,
+condition_less(const struct list_elem *a UNUSED,
                const struct list_elem *b,
-               void *aux)
+               void *aux UNUSED)
 {
-  struct semaphore_elem *insert = list_entry(a, struct semaphore_elem, elem);
   struct semaphore_elem *list = list_entry(b, struct semaphore_elem, elem);
-  struct semaphore in = insert->semaphore; 
   struct semaphore compare = list->semaphore;
-  struct list_elem *a_elem = list_front(&in.waiters);
+  struct list_elem *a_elem = &thread_current()->sema_elem;
   struct list_elem *b_elem = list_front(&compare.waiters);
   return sema_less(a_elem, b_elem, NULL);
 }
@@ -255,6 +256,8 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  /* Calvin driving */
+  /* Yield current thread if new thread has a greater priority */
   struct thread *cur_thread = thread_current ();
   if (cur_thread->priority < t->priority)
     thread_yield();
@@ -296,7 +299,8 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  //list_push_back (&ready_list, &t->elem);
+
+  /*Samantha driving */
   list_insert_ordered (&ready_list, &t->elem, &less, NULL);
   t->status = THREAD_READY;
 
@@ -369,8 +373,9 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-   // list_push_back (&ready_list, &cur->elem);
-    list_insert_ordered (&ready_list, &cur->elem, &less, NULL);
+
+  /*Samantha driving */
+  list_insert_ordered (&ready_list, &cur->elem, &less, NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -402,6 +407,7 @@ thread_set_priority (int new_priority)
 
   thread_current ()->priority = new_priority;
   struct thread *next_thread = list_entry(list_begin(&ready_list), struct thread, elem);
+  /* Calvin driving */
   if (new_priority < next_thread->priority){
     intr_set_level (old_level);
     thread_yield();
@@ -532,10 +538,13 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+
+  /* Calvin driving */
+  /* For priority donation */
   t->priority_array[0] = priority;
   t->index = 0;
   t->waiting_on = NULL;
-  t->locks_held = 0;
+  t->wait_lock = NULL;
   list_push_back(&all_list, &t->allelem);
 }
 
