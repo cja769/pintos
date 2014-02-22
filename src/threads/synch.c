@@ -226,6 +226,10 @@ lock_acquire_help (struct lock *lock){
         farthest->index++;
         if(almost_farthest->wait_lock != NULL){
           (almost_farthest->wait_lock)->donation += 1;
+		if( (almost_farthest->wait_lock)->donation > 1){
+			farthest->priority_array[almost_farthest->wait_lock->index_of_donation] = -1;
+			//printf("donation > 1\n");
+		}
           (almost_farthest->wait_lock)->index_of_donation = almost_farthest->waiting_on->index;
         }
         farthest->priority_array[farthest->index] = original_pri;
@@ -296,12 +300,19 @@ lock_release (struct lock *lock)
   int new = -1;
   if((cur->index) > 0 && lock->donation){ /* a donation was made for this lock*/
     if(lock->index_of_donation < cur->index){
-      cur->extra_down += cur->index - lock->index_of_donation; /* this wasn't the highest donated lock*/
+	cur->priority_array[lock->index_of_donation] = -1;
+	lock->index_of_donation = 0;
+     // cur->extra_down += lock->donation; /* this wasn't the highest donated lock*/
     }
     else{
-      cur->index -= lock->donation;
-      cur->index -= cur->extra_down; /* make up for the offset now that it is the highest donated lock */
-      cur->extra_down = 0;
+     // cur->index -= lock->donation;
+     // cur->index -= cur->extra_down; /* make up for the offset now that it is the highest donated lock */
+     // cur->extra_down = 0;
+	cur->priority_array[cur->index] = -1;
+	while(cur->priority_array[cur->index] == -1){
+//		printf("priority is -1 here at index %d\n",cur->index);
+		cur->index--;
+	}
       new = cur->priority_array[cur->index];
     }
   }
