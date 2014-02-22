@@ -15,12 +15,6 @@ enum thread_status
     THREAD_DYING        /* About to be destroyed. */
   };
 
-struct priority_elem
-  {
-    struct list_elem elem;
-    int priority;
-  };
-
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;

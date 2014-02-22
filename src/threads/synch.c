@@ -72,6 +72,7 @@ sema_down (struct semaphore *sema)
   while (sema->value == 0) 
     {
       /* Calvin driving */
+      /* Insert threads to waiters list in order sorted by priority */
       list_insert_ordered (&sema->waiters, &thread_current ()->sema_elem, &sema_less, NULL);
       thread_block ();
     }
@@ -119,6 +120,7 @@ sema_up (struct semaphore *sema)
   old_level = intr_disable ();
 
   /*Samantha driving */
+  /*Remove thread from front of waiter's list, has highest priority */
   if (!list_empty (&sema->waiters)) {
     list_sort(&sema->waiters, &sema_less, NULL);
      t =(list_entry (list_pop_front (&sema->waiters),
@@ -127,6 +129,7 @@ sema_up (struct semaphore *sema)
   }
   sema->value++;
   /*End Samantha driving, Calvin driving now */
+  /* Makes sure thread yields if unblocked thread has higher priority */
   if(t != NULL && old_level == INTR_ON)
     if(t->priority > thread_get_priority())
       thread_yield();
@@ -197,6 +200,9 @@ lock_init (struct lock *lock)
   lock->index_of_donation = 0;
 }
 
+
+/* Called in lock_acquire(). Maintains two threads while
+iterating through lock holders, handling priority donation */
 void
 lock_acquire_help (struct lock *lock){
   /* Samantha driving */
@@ -209,9 +215,13 @@ lock_acquire_help (struct lock *lock){
   int farthest_pri;
   int alm_farth_pri;
   /* End Samantha driving, Calvin driving now */
+  /* Takes care of priority donations: nested, multiple, or not */
     while((farthest = almost_farthest->waiting_on) != NULL){
         alm_farth_pri = original_pri;
         farthest_pri = farthest->priority;
+      /* Where actual priority donation comes in - checks if
+       * thread holding lock has a lower priority, donates its
+       * priority if so. */
       if(alm_farth_pri > farthest_pri){
         farthest->index++;
         if(almost_farthest->wait_lock != NULL){
@@ -279,6 +289,9 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   /* Calvin driving */
+  /* Releases lock, pops priorities off of thread's priority
+     stack to return to the appropriate priority. Pops off more
+     priorites if more donations have occured because of lock.*/
   struct thread* cur = thread_current();
   int new = -1;
   if((cur->index) > 0 && lock->donation){
@@ -356,6 +369,8 @@ cond_wait (struct condition *cond, struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
   
   /*Samantha driving */
+  /* Insert semaphore into list in sorted order. Releases lock in
+     in order to wait on the semaphore*/
   sema_init (&waiter.semaphore, 0);
   list_insert_ordered (&cond->waiters, &waiter.elem, &condition_less, NULL);
   lock_release (lock);
@@ -378,6 +393,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (!intr_context ());
   ASSERT (lock_held_by_current_thread (lock));
 
+  /* Add semas to list in sorted order */
   if (!list_empty (&cond->waiters)) 
     sema_up (&list_entry (list_pop_front (&cond->waiters),
                           struct semaphore_elem, elem)->semaphore);

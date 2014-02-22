@@ -31,6 +31,7 @@ static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
 /*Calvin driving*/
+/*List to store sleeping threads */
 struct list asleep_threads;
 
 
@@ -91,8 +92,9 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
-/* Sleeps for approximately TICKS timer ticks.  Interrupts must
-   be turned on. */
+/* Sleeps for approximately TICKS timer ticks. Gives current thread
+the given amount of ticks to be decremented as timer_interrupt() is
+called. Interrupts must be turned on. */
 void
 timer_sleep (int64_t ticks) 
 {
@@ -177,7 +179,9 @@ timer_print_stats (void)
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
 
-/* Timer interrupt handler. */
+/* Timer interrupt handler. Iterates through list of sleeping threads
+to decrement their number of ticks. Wakes up a sleeping thread when 
+their number of ticks reaches 0. Also calls thread_tick() */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {

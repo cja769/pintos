@@ -73,8 +73,8 @@ static tid_t allocate_tid (void);
 
 struct lock set_pri_lock;
 
-/*Samantha drivinf */
-/* less function for ready list ordering */
+/*Samantha driving */
+/* less function for ready list ordering. Compares by priority */
 bool
 less(const struct list_elem *a,
                const struct list_elem *b,
@@ -87,7 +87,7 @@ less(const struct list_elem *a,
   return false;
 }
 
-/* less function for sema list ordering */
+/* less function for sema list ordering. Compares by priority */
 bool
 sema_less(const struct list_elem *a,
                const struct list_elem *b,
@@ -101,7 +101,7 @@ sema_less(const struct list_elem *a,
   return false;
 }
 
-/* less function for condvar list ordering */
+/* less function for condvar list ordering. Compares by calling sema_less */
 bool
 condition_less(const struct list_elem *a UNUSED,
                const struct list_elem *b,
@@ -298,6 +298,7 @@ thread_unblock (struct thread *t)
   ASSERT (t->status == THREAD_BLOCKED);
 
   /*Samantha driving */
+  /* Add unblocked thread to ready list in sorted order */
   list_insert_ordered (&ready_list, &t->elem, &less, NULL);
   t->status = THREAD_READY;
 
@@ -372,6 +373,7 @@ thread_yield (void)
   if (cur != idle_thread) 
 
   /*Samantha driving */
+  /*Add current thread to ready list in sorted order */
   list_insert_ordered (&ready_list, &cur->elem, &less, NULL);
   cur->status = THREAD_READY;
   schedule ();
@@ -401,7 +403,7 @@ thread_set_priority (int new_priority)
 { 
   enum intr_level old_level;
   old_level = intr_disable ();
-    /* Calvin driving */
+  /* Calvin driving */
   if(thread_current ()->index == 0 || new_priority > thread_current ()->priority)
     thread_current ()->priority = new_priority;
   thread_current ()->priority_array[0] = new_priority;
@@ -413,6 +415,7 @@ thread_set_priority (int new_priority)
   intr_set_level (old_level);
 }
 
+/* Set current thread's priority, specifically for donation */
 void
 thread_set_priority_donation (int new_priority){
   enum intr_level old_level;
