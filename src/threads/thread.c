@@ -82,7 +82,6 @@ less(const struct list_elem *a,
 {
   struct thread *insert_thread = list_entry(a, struct thread, elem);
   struct thread *list_thread = list_entry(b, struct thread, elem);
-  //printf("List_thread: %d, insert_thread: %d\n", list_thread->priority, insert_thread->priority);
   if(list_thread->priority < insert_thread->priority) 
     return true;
   return false;
@@ -228,8 +227,6 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
-// printf("priority is actually = %d\n",priority);
-//printf("priority = %d\n", t->priority_array[t->index]);
 
   /* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
@@ -404,12 +401,26 @@ thread_set_priority (int new_priority)
 { 
   enum intr_level old_level;
   old_level = intr_disable ();
+    /* Calvin driving */
+  if(thread_current ()->index == 0 || new_priority > thread_current ()->priority)
+    thread_current ()->priority = new_priority;
+  thread_current ()->priority_array[0] = new_priority;
+  struct thread *next_thread = list_entry(list_begin(&ready_list), struct thread, elem);
 
+  if (new_priority < next_thread->priority){
+    thread_yield();
+  }
+  intr_set_level (old_level);
+}
+
+void
+thread_set_priority_donation (int new_priority){
+  enum intr_level old_level;
+  old_level = intr_disable ();
+    /* Samantha driving */
   thread_current ()->priority = new_priority;
   struct thread *next_thread = list_entry(list_begin(&ready_list), struct thread, elem);
-  /* Calvin driving */
   if (new_priority < next_thread->priority){
-    intr_set_level (old_level);
     thread_yield();
   }
   intr_set_level (old_level);
@@ -545,6 +556,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->index = 0;
   t->waiting_on = NULL;
   t->wait_lock = NULL;
+  t->extra_down = 0;
   list_push_back(&all_list, &t->allelem);
 }
 

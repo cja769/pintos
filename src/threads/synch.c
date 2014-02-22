@@ -115,11 +115,12 @@ sema_up (struct semaphore *sema)
   enum intr_level old_level;
 
   ASSERT (sema != NULL);
-  struct thread *t;
+  struct thread *t = NULL;
   old_level = intr_disable ();
 
   /*Samantha driving */
   if (!list_empty (&sema->waiters)) {
+    list_sort(&sema->waiters, &sema_less, NULL);
      t =(list_entry (list_pop_front (&sema->waiters),
                                 struct thread, sema_elem));
   thread_unblock(t);
@@ -193,6 +194,7 @@ lock_init (struct lock *lock)
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
   lock->donation = 0;
+  lock->index_of_donation = 0;
 }
 
 void
@@ -211,11 +213,11 @@ lock_acquire_help (struct lock *lock){
         alm_farth_pri = original_pri;
         farthest_pri = farthest->priority;
       if(alm_farth_pri > farthest_pri){
-        if(farthest->wait_lock != NULL)
-          (farthest->wait_lock)->donation += 1;
-        else
-          lock->donation += 1;
         farthest->index++;
+        if(almost_farthest->wait_lock != NULL){
+          (almost_farthest->wait_lock)->donation += 1;
+          (almost_farthest->wait_lock)->index_of_donation = almost_farthest->waiting_on->index;
+        }
         farthest->priority_array[farthest->index] = original_pri;
         farthest->priority = original_pri;
       }
@@ -280,14 +282,21 @@ lock_release (struct lock *lock)
   struct thread* cur = thread_current();
   int new = -1;
   if((cur->index) > 0 && lock->donation){
-    cur->index -= lock->donation;
-    new = cur->priority_array[cur->index];
+    if(lock->index_of_donation < cur->index){
+      cur->extra_down += cur->index - lock->index_of_donation;
+    }
+    else{
+      cur->index -= lock->donation;
+      cur->index -= cur->extra_down;
+      cur->extra_down = 0;
+      new = cur->priority_array[cur->index];
+    }
   }
   lock->donation = 0;
   lock->holder = NULL;
   sema_up (&lock->semaphore);
   if(new > -1){
-    thread_set_priority(new);
+    thread_set_priority_donation(new);
   }
 
 }

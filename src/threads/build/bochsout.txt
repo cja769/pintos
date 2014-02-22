@@ -30,7 +30,7 @@
 00000000000i[     ]   SB16 support: no
 00000000000i[     ]   USB support: no
 00000000000i[     ]   VGA extension support:  
-00000000000i[MEM0 ] allocated memory at 0x2b0f04a05010. after alignment, vector=0x2b0f04a06000
+00000000000i[MEM0 ] allocated memory at 0x2b0339a93010. after alignment, vector=0x2b0339a94000
 00000000000i[MEM0 ] 4.00MB
 00000000000i[MEM0 ] rom at 0xffff0000/65536 ('/lusr/opt/boch-2.2.6-pintos/share/bochs/BIOS-bochs-latest')
 00000000000i[MEM0 ] rom at 0xc0000/32768 ('/lusr/opt/boch-2.2.6-pintos/share/bochs/VGABIOS-lgpl-latest')
@@ -46,7 +46,7 @@
 00000000000i[     ] init_mem of 'extfpuirq' plugin device by virtual method
 00000000000i[     ] init_mem of 'speaker' plugin device by virtual method
 00000000000i[     ] init_dev of 'harddrv' plugin device by virtual method
-00000000000i[HD   ] HD on ata0-0: '/tmp/TlsJ8ggEET.dsk' 'flat' mode 
+00000000000i[HD   ] HD on ata0-0: '/tmp/V0hsWKMFBg.dsk' 'flat' mode 
 00000000000i[HD   ] Using boot sequence disk, none, none
 00000000000i[HD   ] Floppy boot signature check is enabled
 00000000000i[     ] init_dev of 'keyboard' plugin device by virtual method
@@ -73,27 +73,27 @@
 00000786523e[HD   ] ata0: device set to 1 which does not exist
 00000786815e[HD   ] ata1: device set to 0 which does not exist
 00000787108e[HD   ] ata1: device set to 1 which does not exist
-00032487258p[UNMP ] >>PANIC<< Shutdown port: shutdown requested
-00032487258i[SYS  ] Last time is 32
-00032487258i[NGUI ] bx_nogui_gui_c::exit() not implemented yet.
-00032487258i[CPU  ] protected mode
-00032487258i[CPU  ] CS.d_b = 32 bit
-00032487258i[CPU  ] SS.d_b = 32 bit
-00032487258i[CPU  ] | EAX=0000006e  EBX=c002d038  ECX=c000ef76  EDX=ffff8900
-00032487258i[CPU  ] | ESP=c000ef60  EBP=c000ef78  ESI=00000000  EDI=c002e90d
-00032487258i[CPU  ] | IOPL=0 id vip vif ac vm rf nt of df IF tf sf zf af pf cf
-00032487258i[CPU  ] | SEG selector     base    limit G D
-00032487258i[CPU  ] | SEG sltr(index|ti|rpl)     base    limit G D
-00032487258i[CPU  ] |  CS:0008( 0001| 0|  0) 00000000 000fffff 1 1
-00032487258i[CPU  ] |  DS:0010( 0002| 0|  0) 00000000 000fffff 1 1
-00032487258i[CPU  ] |  SS:0010( 0002| 0|  0) 00000000 000fffff 1 1
-00032487258i[CPU  ] |  ES:0010( 0002| 0|  0) 00000000 000fffff 1 1
-00032487258i[CPU  ] |  FS:0010( 0002| 0|  0) 00000000 000fffff 1 1
-00032487258i[CPU  ] |  GS:0010( 0002| 0|  0) 00000000 000fffff 1 1
-00032487258i[CPU  ] | EIP=c0026147 (c0026146)
-00032487258i[CPU  ] | CR0=0x80010015 CR1=0 CR2=0x00000000
-00032487258i[CPU  ] | CR3=0x00101000 CR4=0x00000000
-00032487258i[CPU  ] >> ee
-00032487258i[CPU  ] >> : out dx, al
-00032487258i[     ] restoring default signal behavior
-00032487258i[CTRL ] quit_sim called with exit code 1
+00005792890p[UNMP ] >>PANIC<< Shutdown port: shutdown requested
+00005792890i[SYS  ] Last time is 5
+00005792890i[NGUI ] bx_nogui_gui_c::exit() not implemented yet.
+00005792890i[CPU  ] protected mode
+00005792890i[CPU  ] CS.d_b = 32 bit
+00005792890i[CPU  ] SS.d_b = 32 bit
+00005792890i[CPU  ] | EAX=0000006e  EBX=c002d0d8  ECX=c000ef76  EDX=ffff8900
+00005792890i[CPU  ] | ESP=c000ef60  EBP=c000ef78  ESI=00000000  EDI=c002e9ad
+00005792890i[CPU  ] | IOPL=0 id vip vif ac vm rf nt of df IF tf sf zf af pf cf
+00005792890i[CPU  ] | SEG selector     base    limit G D
+00005792890i[CPU  ] | SEG sltr(index|ti|rpl)     base    limit G D
+00005792890i[CPU  ] |  CS:0008( 0001| 0|  0) 00000000 000fffff 1 1
+00005792890i[CPU  ] |  DS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+00005792890i[CPU  ] |  SS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+00005792890i[CPU  ] |  ES:0010( 0002| 0|  0) 00000000 000fffff 1 1
+00005792890i[CPU  ] |  FS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+00005792890i[CPU  ] |  GS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+00005792890i[CPU  ] | EIP=c00261e7 (c00261e6)
+00005792890i[CPU  ] | CR0=0x80010015 CR1=0 CR2=0x00000000
+00005792890i[CPU  ] | CR3=0x00101000 CR4=0x00000000
+00005792890i[CPU  ] >> ee
+00005792890i[CPU  ] >> : out dx, al
+00005792890i[     ] restoring default signal behavior
+00005792890i[CTRL ] quit_sim called with exit code 1

@@ -23,6 +23,7 @@ struct lock
     struct thread *holder;      /* Thread holding lock (for debugging). */
     struct semaphore semaphore; /* Binary semaphore controlling access. */
     int donation;               /* To keep track of how many donations occur because of this lock */
+    int index_of_donation;
   };
 
 void lock_init (struct lock *);
@@ -36,7 +37,7 @@ struct condition
   {
     struct list waiters;        /* List of waiting threads. */
   };
-
+void lock_acquire_help (struct lock *lock);
 void cond_init (struct condition *);
 void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);

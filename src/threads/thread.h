@@ -115,6 +115,8 @@ struct thread
     int index;
     struct lock *wait_lock;
     struct thread *waiting_on;
+    int extra_down;
+
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -129,6 +131,8 @@ struct thread
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+
+void thread_set_priority_donation (int new_priority);
 
 bool
 less(const struct list_elem *a, const struct list_elem *b, void *aux);
