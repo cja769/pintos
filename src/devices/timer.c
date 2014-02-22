@@ -101,7 +101,9 @@ timer_sleep (int64_t ticks)
   struct thread *current = thread_current();
   sema_init(&(current->sleep_sem), 0);
   current->ticks_left = ticks;
+  enum intr_level old_level = intr_disable ();
   list_push_front(&asleep_threads, &(current->asleep_elem));
+  intr_set_level (old_level);
   sema_down(&(current->sleep_sem));
 }
 
