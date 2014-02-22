@@ -404,9 +404,9 @@ thread_set_priority (int new_priority)
   enum intr_level old_level;
   old_level = intr_disable ();
   /* Calvin driving */
-  if(thread_current ()->index == 0 || new_priority > thread_current ()->priority)
+  if(thread_current ()->index == 0 || new_priority > thread_current ()->priority) /* update the actual priority because current is the original/base prioirty */
     thread_current ()->priority = new_priority;
-  thread_current ()->priority_array[0] = new_priority;
+  thread_current ()->priority_array[0] = new_priority; /* reset the base priority */
   struct thread *next_thread = list_entry(list_begin(&ready_list), struct thread, elem);
 
   if (new_priority < next_thread->priority){
@@ -421,7 +421,7 @@ thread_set_priority_donation (int new_priority){
   enum intr_level old_level;
   old_level = intr_disable ();
     /* Samantha driving */
-  thread_current ()->priority = new_priority;
+  thread_current ()->priority = new_priority; /* since this is for donation we always want to update the actual priority but not update the base */
   struct thread *next_thread = list_entry(list_begin(&ready_list), struct thread, elem);
   if (new_priority < next_thread->priority){
     thread_yield();

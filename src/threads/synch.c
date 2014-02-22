@@ -294,13 +294,13 @@ lock_release (struct lock *lock)
      priorites if more donations have occured because of lock.*/
   struct thread* cur = thread_current();
   int new = -1;
-  if((cur->index) > 0 && lock->donation){
+  if((cur->index) > 0 && lock->donation){ /* a donation was made for this lock*/
     if(lock->index_of_donation < cur->index){
-      cur->extra_down += cur->index - lock->index_of_donation;
+      cur->extra_down += cur->index - lock->index_of_donation; /* this wasn't the highest donated lock*/
     }
     else{
       cur->index -= lock->donation;
-      cur->index -= cur->extra_down;
+      cur->index -= cur->extra_down; /* make up for the offset now that it is the highest donated lock */
       cur->extra_down = 0;
       new = cur->priority_array[cur->index];
     }
@@ -309,7 +309,7 @@ lock_release (struct lock *lock)
   lock->holder = NULL;
   sema_up (&lock->semaphore);
   if(new > -1){
-    thread_set_priority_donation(new);
+    thread_set_priority_donation(new); /* priority has changed so update and maybe yield */
   }
 
 }
