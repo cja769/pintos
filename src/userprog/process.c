@@ -52,20 +52,16 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (argv[count], temp, PGSIZE);
   printf("ARGV: %s\n",argv[count]);
-  printf("SAVEPTR: %s\n",saveptr);
   count++;
   argv[count] = palloc_get_page(0);
-  temp = strtok_r(NULL, " ", &saveptr);
-  strlcpy (argv[count], temp, PGSIZE);
-  printf("ARGV: %s\n",argv[count]);
-  while( temp != NULL){
+  while((temp = strtok_r(NULL, " ", &saveptr)) != NULL){
     // palloc_free_page(temp);
     // temp = palloc_get_page(0);
-    temp = strtok_r(NULL, " ", &saveptr);
     argv[count] = palloc_get_page(0);
     if (argv[count] == NULL)
       return TID_ERROR;
     strlcpy (argv[count], temp, PGSIZE);
+    printf("ARGV: %s\n",argv[count]);
     count++;
   }  
 
