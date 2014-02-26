@@ -19,7 +19,7 @@
 #include "threads/vaddr.h"
 
 static thread_func start_process NO_RETURN;
-static bool load (const char *cmdline, void (**eip) (void), void **esp);
+static bool load (char *cmdline, void (**eip) (void), void **esp);
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -31,6 +31,10 @@ process_execute (const char *file_name)
   char *fn_copy;
   tid_t tid;
 
+  char **saveptr;							/* Used for strtok_r */
+	//int argc = 0;
+	//bool verbose = true;
+
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
@@ -38,8 +42,18 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+	strtok_r(fn_copy, " ", saveptr);
+
+  /*while (*saveptr[argc])
+	{
+		if (verbose)
+			printf ("%s ", *saveptr[argc]);
+		argc++;
+	}
+	printf ("\n");*/
+
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (file_name, PRI_DEFAULT, start_process, *saveptr);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -88,7 +102,10 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  return -1;
+  while(1)
+	{
+		/* Infinite loop!! */
+	}
 }
 
 /* Free the current process's resources. */
@@ -195,7 +212,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp, char *file_name);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -206,7 +223,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool
-load (const char *file_name, void (**eip) (void), void **esp) 
+load (char *file_name, void (**eip) (void), void **esp) 
 {
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
@@ -302,7 +319,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp))
+  if (!setup_stack (esp, file_name))
     goto done;
 
   /* Start address. */
@@ -427,17 +444,47 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp) 
+setup_stack (void **esp, char *file_name) 
 {
   uint8_t *kpage;
   bool success = false;
+	int i;
+	int argc = 0;
+	char *myesp;
 
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
-        *esp = PHYS_BASE;
+			{
+				*esp = PHYS_BASE;
+				myesp = (char*)myesp;
+				/* pushes arguments onto the stack from right to left */
+				while (file_name[argc])
+					argc++;
+				for(i = argc-1; i >= 0; i--)
+				{
+					myesp -= strlen(file_name[argc]);
+					myesp = file_name[argc];
+				}
+				myesp = ROUND_DOWN(*(int*)myesp, 4); /* word-align */
+				myesp--;
+				myesp = file_name[argc]; /* argv[argc] is a null pointer */
+				/* pushes addresses of arguments onto the stack */
+				for(i = argc-1; i >= 0; i--)
+				{
+					myesp -= strlen(file_name[i]);
+					myesp = &file_name[i];
+				}
+				myesp--;
+				myesp = file_name; /* pushes argv onto the stack */
+				myesp--;
+				myesp = argc; /* pushes argc onto the stack */
+				myesp--;
+				myesp = 0; /* fake return address */
+				*esp = myesp;
+			}
       else
         palloc_free_page (kpage);
     }
