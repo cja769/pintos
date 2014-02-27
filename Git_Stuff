@@ -1,0 +1,12 @@
+git init
+git clone https://github.com/cja769/pintos.git
+git pull origin master
+/* enter user name and password */
+
+git commit -am "<some note>"
+git push origin master
+
+git pull
+/* you've updated and want to override */
+git stash
+git pull
