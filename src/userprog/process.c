@@ -49,7 +49,6 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-  // printf("FN_COPY: %s\n",fn_copy);
   char *temp = palloc_get_page(0);
   temp = strtok_r(fn_copy, " ", &saveptr);
   arguments->argv = palloc_get_page(0);
@@ -57,7 +56,6 @@ process_execute (const char *file_name)
   if (arguments->argv[arguments->argc] == NULL || arguments->argv == NULL)
     return TID_ERROR;
   strlcpy (arguments->argv[arguments->argc], temp, PGSIZE);
-  printf("ARGV: %s\n", arguments->argv[arguments->argc]);
   arguments->argc++;
   arguments->argv[arguments->argc] = palloc_get_page(0);
   while((temp = strtok_r(NULL, " ", &saveptr)) != NULL){
@@ -67,7 +65,6 @@ process_execute (const char *file_name)
     if (arguments->argv[arguments->argc] == NULL)
       return TID_ERROR;
     strlcpy (arguments->argv[arguments->argc], temp, PGSIZE);
-    printf("ARGV: %s\n", arguments->argv[arguments->argc]);
     arguments->argc++;
   }  
 
@@ -494,42 +491,33 @@ setup_stack (void **esp, struct args *file_name)
       {
         *esp = PHYS_BASE;
         myesp = (char*)*esp;
-        /* pushes arguments onto the stack from right to left */
+        /* pushes command line onto the stack from right to left */
         for(i = file_name->argc-1; i >= 0; i--)
         {
-          //printf ("i: %d\n", i);
-          //printf ("arg: %s\n", file_name->argv[i]);
           myesp -= (strlen(file_name->argv[i]) + 1);
-          addr[i] = myesp; /* save the address of each argument on the stack */
+          addr[i] = (int)myesp; /* save the address of each argument on the stack */
           strlcpy(myesp, file_name->argv[i], strlen(file_name->argv[i]) + 1);
-          printf ("*myesp: %s\n", myesp);
-          printf ("&myesp: %p\n", &myesp);
         }
 
-        // hex_dump(myesp, myesp, 40, 1);
         myesp = (char*)ROUND_DOWN((uintptr_t)myesp, 4); /* word-align */
-        //printf ("After ROUND_DOWN\n");
-        myesp--;
+        myesp-=4;
         memcpy(myesp, &file_name->argv[file_name->argc], sizeof(int *)); /* argv[argc] is a null pointer */
-        //printf ("myesp: %s\n", myesp);
         /* pushes addresses of arguments onto the stack */
+
         for(i = file_name->argc-1; i >= 0; i--)
         {
           myesp -= 4;
-          printf ("addr[%d]: %p\n", i , addr[i]);
-          memcpy(myesp, addr[i], sizeof(int*));
-          // hex_dump(myesp, myesp, PHYS_BASE-(int)myesp, 1);
-          //printf ("myesp: %s\n", myesp);
+          memcpy(myesp, &addr[i], sizeof(int));
         }
+        //hex_dump(myesp, myesp, PHYS_BASE - (int)myesp, 1);
         myesp -= 4;
-        memcpy(myesp, addr[0], sizeof(int *)); /* pushes argv onto the stack */
-        printf ("432myesp: %p\n", addr[0]);
+        memcpy(myesp, &addr[0], sizeof(int *)); /* pushes argv onto the stack */
         myesp -= 4;
-        memcpy(myesp, file_name->argc, sizeof(int)); /* pushes argc onto the stack */
-        printf ("2myesp: %s\n", myesp);
+        memcpy(myesp, &(file_name->argc), sizeof(int)); /* pushes argc onto the stack */
         myesp -= 4;
-        memcpy(myesp, 0, sizeof(char *)); /* fake return address */
-        printf ("1346myesp: %s\n", myesp);
+        i = 0;
+        memcpy(myesp, &i, sizeof(char *)); /* fake return address */
+        hex_dump(myesp, myesp, PHYS_BASE - (int)myesp, 1);
         *esp = myesp;
       }
       else
