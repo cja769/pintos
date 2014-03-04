@@ -482,6 +482,7 @@ setup_stack (void **esp, struct args *file_name)
   int i;
   char *myesp;
   int addr[file_name->argc]; /* to store the address of each argument we push on the stack */
+  int addr_argv;
 
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
@@ -508,16 +509,18 @@ setup_stack (void **esp, struct args *file_name)
         {
           myesp -= 4;
           memcpy(myesp, &addr[i], sizeof(int));
+          if(i == 0)
+            memcpy(&addr_argv, &myesp, sizeof(int));
         }
         //hex_dump(myesp, myesp, PHYS_BASE - (int)myesp, 1);
         myesp -= 4;
-        memcpy(myesp, &addr[0], sizeof(int *)); /* pushes argv onto the stack */
+        memcpy(myesp, &addr_argv, sizeof(int *)); /* pushes argv onto the stack */
         myesp -= 4;
         memcpy(myesp, &(file_name->argc), sizeof(int)); /* pushes argc onto the stack */
         myesp -= 4;
         i = 0;
         memcpy(myesp, &i, sizeof(char *)); /* fake return address */
-        hex_dump(myesp, myesp, PHYS_BASE - (int)myesp, 1);
+        //hex_dump(myesp, myesp, PHYS_BASE - (int)myesp, 1);
         *esp = myesp;
       }
       else
