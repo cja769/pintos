@@ -94,6 +94,7 @@ struct thread
 
     char * file_list[128];              /* List of open files */
     int file_index;                     /* Index of last open file */
+    int wrap_flag;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
