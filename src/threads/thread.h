@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "filesys/file.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -92,7 +93,7 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
 
-    char * file_list[128];              /* List of open files */
+    struct file *file_list[128];              /* List of pointers to open file structs */
     int file_index;                     /* Index of last open file */
     int wrap_flag;
 
