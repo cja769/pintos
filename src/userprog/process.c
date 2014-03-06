@@ -124,6 +124,13 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  //Find thread with given tid (part of thread struct)
+  //While loop (?) until thread status is DYING or something
+  //Get exit status from f->eax (somehow)
+  //Exit status will be weird if terminated by kernal
+  //Somehow check if process_wait has been called for this thread
+  //  (Maybe add boolean to thread struct?)
+  //
   while(1)
   {
     /* Infinite loop!! */

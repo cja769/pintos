@@ -13,6 +13,11 @@
 
 static void syscall_handler (struct intr_frame *);
 
+/* file_index_increment - a function to incremement the file index inside the thread struct
+ *   that wraps around the the beginning of the array if file_index is > >= 128. Once the
+ *   index wraps around, it searches for an index in the file_list array that is null  
+ *   (i.e. that file has been removed)
+ */
 void file_index_increment() {
   struct thread *t = thread_current();
   int index = t->file_index;
@@ -23,10 +28,14 @@ void file_index_increment() {
       index = 0;
       t->wrap_flag =1;
     } 
-  }while( t->wrap_flag && t->file_list[index] != NULL)
+  } while( t->wrap_flag && t->file_list[index] != NULL);
   t->file_index = index;
 }
 
+
+/* get_arg - a function that gets a desired argument from the stack, checking if it is a valid
+ *   argument 
+ */
 int
 get_arg (int *esp)
 {
@@ -64,39 +73,47 @@ syscall_handler (struct intr_frame *f)
     case 0: //HALT
       shutdown_power_off();
       break;
+
     case 1: //EXIT
       status = get_arg(myesp);
       myesp++;
       f->eax = status;
       thread_exit();
       break;
-    case 2:
+
+    case 2: //EXEC
 
       break;
-    case 3:
+
+    case 3: //WAIT
 
       break;
 
-    case 4:
+    case 4: //CREATE
 
       break;
-    case 5: 
+
+    case 5: //REMOVE
 
       break;
-    case 6: // Open
+
+    case 6: // OPEN
       arg = (char *)get_arg (myesp);
       myesp++;
       printf ("Opening... %s\n", arg);
       open (arg);
       printf ("Opened\n");
       break;
-    case 7: 
+
+    case 7: //FILESIZE
 
       break;
-    case 8: 
+
+    case 8: //READ
 
       break;
-    case 9: // Write
+
+    case 9: // WRITE
       fd = get_arg(myesp);
       myesp++;
       buffer = (void *)get_arg(myesp);
@@ -107,6 +124,19 @@ syscall_handler (struct intr_frame *f)
       write(fd, buffer, size);
       // printf ("Wrote...\n");
       break;
+
+    case 10: //SEEK
+
+      break;
+
+    case 11: //TELL
+
+      break;
+
+    case 12: //CLOSE
+
+      break;
+      
     default: 
       // TODO
       printf ("Syscall not yet defined!\n");
@@ -149,10 +179,11 @@ int write (int fd, const void *buffer, unsigned size)
   if (fd >= 2) {
     fd -= 2;
     struct thread *t = thread_current();
-    // strlcpy (file, t->file_list[fd], PGSIZE);
+    strlcpy (file, t->file_list[fd], PGSIZE);
     printf("File name: %s", t->file_list[fd]);
   }
 
+  //Special case for writing to console
   if (fd == 1) {
     putbuf((char *)buffer, size);
   }
