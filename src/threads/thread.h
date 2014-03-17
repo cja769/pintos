@@ -97,7 +97,10 @@ struct thread
     int file_index;                     /* Index of last open file */
     int wrap_flag;
 
-    int exit_status;
+    /* Use a shared semaphore between threads so that a parent knows
+       when its child exits, a child process needs to be able to set the
+       parents information about the child processes.. etc. */
+    int exit_status; // We need to get rid of this
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */

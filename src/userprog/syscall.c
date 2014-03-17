@@ -60,8 +60,10 @@ void halt (void) {
 }
 
 void exit (int status) {
-  struct thread *t = thread_current ();
-  t->exit_status = status;
+  /* Find out where to save the exit status... I think Moob told us to 
+     make a struct thatr has the child element in it for each semaphore? */
+  //struct thread *t = thread_current ();
+  //t->exit_status = status;
   thread_exit();
 }
 
@@ -207,8 +209,9 @@ syscall_handler (struct intr_frame *f)
     case 1: { //EXIT 
       int status = get_arg(myesp);
       f->eax = status;
-      struct thread *t = thread_current();
-      t->exit_status = status;
+      /* I don't think we need this... */
+      //struct thread *t = thread_current();
+      //t->exit_status = status; 
       exit(status);
       break;
     }
@@ -216,7 +219,7 @@ syscall_handler (struct intr_frame *f)
     case 2: { //EXEC
       char *cmd_line = (char *)get_arg(myesp);
       printf ("Exec-ing...\n");
-      exec (cmd_line);
+      f->eax = exec (cmd_line);
       printf ("Exec-ed\n");
       break;
     }
