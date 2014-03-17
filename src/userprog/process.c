@@ -18,13 +18,6 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
-/* A struct to store the command line, parsed, and
-   the number of arguments. */
-typedef struct args {
-  char ** argv;
-  int argc;
-}args;
-
 static thread_func start_process NO_RETURN;
 static bool load (struct args *file_name, void (**eip) (void), void **esp);
 
@@ -122,7 +115,7 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
   //Find thread with given tid (part of thread struct)
   //While loop (?) until thread status is DYING or something
@@ -131,10 +124,22 @@ process_wait (tid_t child_tid UNUSED)
   //Somehow check if process_wait has been called for this thread
   //  (Maybe add boolean to thread struct?)
   //
-  while(1)
-  {
-    /* Infinite loop!! */
+  struct thread *t = thread_get(child_tid);
+  printf("param tid: %d, thread tid: %d\n", child_tid, t->tid);
+
+  if(t == NULL || t->status == THREAD_DYING) //REMEMBER TO DEAL WITH CHILD STUFF
+    return -1;
+
+  while(t->status != THREAD_DYING) {
+    thread_yield();
   }
+
+  return t->exit_status;
+
+  // while(1)
+  // {
+  //    Infinite loop!! 
+  // }
 }
 
 /* Free the current process's resources. */

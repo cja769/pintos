@@ -97,6 +97,8 @@ struct thread
     int file_index;                     /* Index of last open file */
     int wrap_flag;
 
+    int exit_status;
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -113,6 +115,8 @@ struct thread
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+
+struct thread *thread_get(tid_t tid);
 
 void thread_init (void);
 void thread_start (void);

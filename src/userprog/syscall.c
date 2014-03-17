@@ -1,4 +1,5 @@
 #include "userprog/syscall.h"
+#include "userprog/process.h"
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
@@ -9,10 +10,12 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "devices/shutdown.h"
+#include "devices/input.h"
 #include <string.h>
-#include <stdarg.h>
+#include <stdarg.h> 
 
-
+/* Protoypes */
+void file_index_increment ();
 static void syscall_handler (struct intr_frame *);
 
 /* file_index_increment - a function to incremement the file index inside the thread struct
@@ -20,7 +23,7 @@ static void syscall_handler (struct intr_frame *);
  *   index wraps around, it searches for an index in the file_list array that is null  
  *   (i.e. that file has been removed)
  */
-void file_index_increment() {
+void file_index_increment () {
   struct thread *t = thread_current();
   int index = t->file_index;
   index--;
@@ -57,15 +60,20 @@ void halt (void) {
 }
 
 void exit (int status) {
+  struct thread *t = thread_current ();
+  t->exit_status = status;
   thread_exit();
 }
 
 pid_t exec (const char *cmd_line) {
-  return 1;
+  int tid = process_execute (cmd_line);
+  printf ("Result from process_execute: %d\n", tid);
+  return tid;
 }
 
 int wait (pid_t pid) {
-  return 1;
+  printf ("pid: %d\n", pid); // WHAT IS PID
+  return process_wait (pid);
 }
 
 bool create (const char *file, unsigned initial_size) {
@@ -116,14 +124,17 @@ int read (int fd, void *buffer, unsigned size) {
     struct file *file = t->file_list[fd];
     return file_read (file, buffer, size);
     }
-  else if(fd = 0){
-    int i ;
+  else if(fd == 0){
+    unsigned i ;
     uint8_t *buffer_ = buffer;
     for(i = 0; i < size; i++){
-      memcpy(input_getc(), buffer_, sizeof(char));
+      char temp = input_getc(); // Storing the return value
+      memcpy(&temp, buffer_, sizeof(char));
     }
     return size;
   }
+
+  return 0; // Control never reaches here
 }
 
 int write (int fd, const void *buffer, unsigned size)
@@ -175,6 +186,8 @@ syscall_handler (struct intr_frame *f)
   int syscall_number = *(int*)f->esp;
   int *myesp = (int*)f->esp;
   myesp++; // Got syscall_number, increment stack pointer
+
+  printf("Syscall number: %d\n", syscall_number);
   // int status;
 
   // printf ("Syscall: %d\n", syscall_number);
@@ -194,17 +207,23 @@ syscall_handler (struct intr_frame *f)
     case 1: { //EXIT 
       int status = get_arg(myesp);
       f->eax = status;
+      struct thread *t = thread_current();
+      t->exit_status = status;
       exit(status);
       break;
     }
 
     case 2: { //EXEC
-
+      char *cmd_line = (char *)get_arg(myesp);
+      printf ("Exec-ing...\n");
+      exec (cmd_line);
+      printf ("Exec-ed\n");
       break;
     }
 
     case 3: { //WAIT
-
+      pid_t pid = get_arg(myesp);
+      wait(pid);
       break;
     }
 
