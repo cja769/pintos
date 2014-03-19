@@ -136,6 +136,7 @@ process_wait (tid_t child_tid)
       struct thread *copy = list_entry (e, struct thread, elem);
       if (copy->tid == child_tid)
       {
+        //REMEMBER TO TAKE CHILD COPY OFF OF LIST
         while (copy->status != THREAD_DYING)
         {
           thread_yield();
@@ -144,8 +145,8 @@ process_wait (tid_t child_tid)
         ASSERT (copy->status == THREAD_DYING); 
         //printf ("Copying exit status... %d\n", copy->exit_status);
         exit_status = copy->exit_status;
-      }
-      continue; // break
+       break;
+      } // break
     }
 
   return exit_status;
@@ -162,7 +163,6 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
