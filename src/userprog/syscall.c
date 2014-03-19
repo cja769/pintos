@@ -61,20 +61,42 @@ void halt (void) {
 
 void exit (int status) {
   /* Find out where to save the exit status... I think Moob told us to 
-     make a struct thatr has the child element in it for each semaphore? */
-  //struct thread *t = thread_current ();
-  //t->exit_status = status;
+     make a struct that has the child element in it for each semaphore? */
+  
+  /* Get the copy of this thread from the parent, and set its exit status */
+  struct thread *t = thread_current ();
+
+  /* Loop through the parents list of children to find the copy that matches this thread... */
+  struct list_elem *e;
+  struct thread *copy;
+
+  for (e = list_begin (&t->parent->children); e != list_end (&t->parent->children);
+       e = list_next (e))
+    {
+      copy = list_entry (e, struct thread, elem);
+      if (copy->tid == t->tid)
+      {
+        // Create the zombie process for the parent
+        copy->exit_status = status; 
+        copy->status = THREAD_DYING;
+        //printf ("Creating zombie process!!!\n");
+      }
+      continue; // 'break' to thread_exit ()
+    }
+
+  printf ("%s: exit(%d)\n", copy->name, copy->exit_status); // SHOULD WE USE PRINTF HERE?!?
+
   thread_exit();
 }
 
 pid_t exec (const char *cmd_line) {
   int tid = process_execute (cmd_line);
-  printf ("Result from process_execute: %d\n", tid);
+  //printf ("Result from process_execute: %d\n", tid);
   return tid;
 }
 
 int wait (pid_t pid) {
-  printf ("pid: %d\n", pid); // WHAT IS PID
+  //printf ("pid: %d\n", pid);
   return process_wait (pid);
 }
 
@@ -189,7 +211,7 @@ syscall_handler (struct intr_frame *f)
   int *myesp = (int*)f->esp;
   myesp++; // Got syscall_number, increment stack pointer
 
-  printf("Syscall number: %d\n", syscall_number);
+  //printf("Syscall number: %d\n", syscall_number);
   // int status;
 
   // printf ("Syscall: %d\n", syscall_number);
@@ -208,25 +230,22 @@ syscall_handler (struct intr_frame *f)
 
     case 1: { //EXIT 
       int status = get_arg(myesp);
-      f->eax = status;
-      /* I don't think we need this... */
-      //struct thread *t = thread_current();
-      //t->exit_status = status; 
+      f->eax = status; // We might not need this... 
       exit(status);
       break;
     }
 
     case 2: { //EXEC
       char *cmd_line = (char *)get_arg(myesp);
-      printf ("Exec-ing...\n");
+      //printf ("Exec-ing...\n");
       f->eax = exec (cmd_line);
-      printf ("Exec-ed\n");
+      //printf ("Exec-ed\n");
       break;
     }
 
     case 3: { //WAIT
       pid_t pid = get_arg(myesp);
-      wait(pid);
+      f->eax = wait(pid);
       break;
     }
 

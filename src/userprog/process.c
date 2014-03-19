@@ -124,17 +124,31 @@ process_wait (tid_t child_tid)
   //Somehow check if process_wait has been called for this thread
   //  (Maybe add boolean to thread struct?)
   //
-  struct thread *t = thread_get(child_tid);
-  printf("param tid: %d, thread tid: %d\n", child_tid, t->tid);
+  struct thread *t = thread_current ();
+  //printf("param tid: %d, thread tid: %d\n", child_tid, t->tid);
 
-  if(t == NULL || t->status == THREAD_DYING) //REMEMBER TO DEAL WITH CHILD STUFF
-    return -1;
+  struct list_elem *e;
+  int exit_status;
 
-  while(t->status != THREAD_DYING) {
-    thread_yield();
-  }
+  for (e = list_begin (&t->children); e != list_end (&t->children);
+       e = list_next (e))
+    {
+      struct thread *copy = list_entry (e, struct thread, elem);
+      if (copy->tid == child_tid)
+      {
+        while (copy->status != THREAD_DYING)
+        {
+          thread_yield();
+        }
 
-  return t->exit_status;
+        ASSERT (copy->status == THREAD_DYING); 
+        //printf ("Copying exit status... %d\n", copy->exit_status);
+        exit_status = copy->exit_status;
+      }
+      continue; // break
+    }
+
+  return exit_status;
 
   // while(1)
   // {
@@ -279,7 +293,7 @@ load (struct args *file_name, void (**eip) (void), void **esp)
     goto done;
   process_activate ();
 
-  printf("File name: %s\n", file_);
+  //printf("File name: %s\n", file_);
 
   /* Open executable file. */
   file = filesys_open (file_);

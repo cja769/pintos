@@ -71,21 +71,6 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
-/* thread_get - returns thread with given tid
- */
-struct thread *thread_get(tid_t tid) {
-  struct list_elem *e;
-
-  for (e = list_begin (&all_list); e != list_end (&all_list);
-       e = list_next (e))
-  {
-    struct thread *t = list_entry (e, struct thread, allelem);
-    if (t->tid == tid)
-      return t;
-  }
-  return NULL;
-}
-
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -111,6 +96,7 @@ thread_init (void)
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
+  list_init (&initial_thread->children); // Initialize the initial_thread's list of children
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
 }
@@ -220,6 +206,18 @@ thread_create (const char *name, int priority,
   sf->ebp = 0;
 
   intr_set_level (old_level);
+
+  // Set parent thread to current thread, initialize children semphore
+  t->parent = thread_current ();
+  list_init (&t->children);
+
+  // Add this child process to this threads list of children
+  struct thread *copy;
+  copy = palloc_get_page (PAL_ZERO); // Maybe not the greatest idea
+  copy->tid = tid;
+  strlcpy (copy->name, name, sizeof t->name);
+  copy->status = THREAD_DUMMY;
+  list_push_back (&thread_current ()->children, &copy->elem);
 
   /* Add to run queue. */
   thread_unblock (t);
