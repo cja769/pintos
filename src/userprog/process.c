@@ -150,11 +150,6 @@ process_wait (tid_t child_tid)
     }
 
   return exit_status;
-
-  // while(1)
-  // {
-  //    Infinite loop!! 
-  // }
 }
 
 /* Free the current process's resources. */

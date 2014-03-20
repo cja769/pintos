@@ -101,6 +101,7 @@ int wait (pid_t pid) {
 }
 
 bool create (const char *file, unsigned initial_size) {
+  printf("%s, %d\n", file, initial_size);
   return filesys_create (file, initial_size);
 }
 
@@ -112,17 +113,15 @@ int open (const char *file)
 {
   struct thread *t = thread_current ();
   struct file *_file = NULL;
-  printf ("In open: %s\n", file);
+  // printf ("In open: %s\n", file);
   _file = filesys_open (file);
   if(_file == NULL)
   {
-    // Maybe close it?
-    // Most things tried are null, though not null for 'ls ls' ...for some reason
-    printf ("Null file!\n");
+    // printf ("Null file!\n");
     return -1;
   }
   else
-    printf("Not null!\n");
+    // printf("Not null!\n");
   // Put it in thread array file_list
   file_index_increment();
   t->file_list[t->file_index] = palloc_get_page(0);
@@ -198,8 +197,11 @@ void close (int fd) {
   struct thread *t = thread_current();
   if (fd >= 2)
     fd -=2;
-  struct file * file = t->file_list[fd];
-  file_close (file);
+  if (t->file_list[fd] != NULL) {
+    struct file * file = t->file_list[fd];
+    file_close (file);
+    t->file_list[fd] = NULL;
+  }
 }
 
 
@@ -253,32 +255,37 @@ syscall_handler (struct intr_frame *f)
       char * file = (char *)get_arg(myesp);
       myesp++;
       int initial_size = get_arg(myesp);
-      create(file, initial_size);
+      f->eax = create(file, initial_size);
       break;
     }
 
     case 5: { //REMOVE
       char * file = (char *)get_arg(myesp);
-      remove(file);
+      f->eax = remove(file);
       break;
     }
 
     case 6: { // OPEN
       char *arg = (char *)get_arg (myesp);
-      printf ("Opening... %s\n", arg);
-      open (arg);
-      printf ("Opened\n");
+      // printf ("Opening... %s\n", arg);
+      f->eax = open (arg);
+      // printf ("Opened\n");
       break;
     }
 
     case 7: { //FILESIZE
       int fd = get_arg(myesp);
-      filesize(fd);
+      f->eax = filesize(fd);
       break;
     }
 
     case 8: { //READ
-
+      int fd = get_arg(myesp);
+      myesp++;
+      void * buffer = (void *)get_arg(myesp);
+      myesp++;
+      int size = get_arg(myesp);
+      f->eax = read(fd, buffer, size);
       break;
     }
 
@@ -289,7 +296,7 @@ syscall_handler (struct intr_frame *f)
       myesp++;
       int size = get_arg(myesp);
       // printf ("Writing... fd = %d, buffer = %s, size = %u\n", fd, (char *)buffer, size);
-      write(fd, buffer, size);
+      f->eax = write(fd, buffer, size);
       // printf ("Wrote...\n");
       break;
     }
@@ -304,12 +311,13 @@ syscall_handler (struct intr_frame *f)
 
     case 11: { //TELL
       int fd = get_arg(myesp);
-      tell(fd);
+      f->eax = tell(fd);
       break;
     }
 
     case 12: { //CLOSE
       int fd = get_arg(myesp);
+      // printf("fd: %d\n", fd);
       close(fd);
       break;
     }

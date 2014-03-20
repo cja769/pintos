@@ -33,8 +33,11 @@ cscope:: cscope.files
 ##################
 TAID = "ccoleman"
 
+#turnin.tar: clean
+#	tar cf turnin.tar `find . -type f | grep -v '^\.*$$' | grep -v '/CVS/' | grep -v '/\.svn/' | grep -v '/\.git/' | grep -v '*\.tar\.gz' | grep -v '/\~/' | grep -v '/\.txt' | grep -v '/\.pl' |grep -v '/\.tar/'` 
+
 turnin.tar: clean
-	tar cf turnin.tar `find . -type f | grep -v '^\.*$$' | grep -v '/CVS/' | grep -v '/\.svn/' | grep -v '/\.git/' | grep -v '*\.tar\.gz' | grep -v '/\~/' | grep -v '/\.txt' | grep -v '/\.pl' |grep -v '/\.tar/'` 
+	tar cvf turnin.tar `find . -type f | grep -v \.tar$$ | grep -v \.tar\.gz$$ | grep -v /\.git | grep -v \.swp$$ | grep -v CVS | grep -v svn | grep -v \.pl$$` 
 
 TURNIN := /lusr/bin/turnin
 GRADER := ccoleman

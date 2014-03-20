@@ -215,6 +215,7 @@ thread_create (const char *name, int priority,
   struct thread *copy;
   copy = palloc_get_page (PAL_ZERO); // Maybe not the greatest idea
   copy->tid = tid;
+  printf("name of original: %s\n", t->name);
   strlcpy (copy->name, name, sizeof t->name);
   copy->status = THREAD_DUMMY;
   list_push_back (&thread_current ()->children, &copy->elem);
