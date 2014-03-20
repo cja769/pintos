@@ -40,14 +40,14 @@ process_execute (const char *file_name)
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
   if (fn_copy == NULL)
-    return TID_ERROR;
+    tid = TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
   char *temp = palloc_get_page(0);
   temp = strtok_r(fn_copy, " ", &saveptr);
   arguments->argv = palloc_get_page(0);
   arguments->argv[arguments->argc] = palloc_get_page(0);
   if (arguments->argv[arguments->argc] == NULL || arguments->argv == NULL)
-    return TID_ERROR;
+    tid = TID_ERROR;
   strlcpy (arguments->argv[arguments->argc], temp, PGSIZE);
   arguments->argc++;
   arguments->argv[arguments->argc] = palloc_get_page(0);
@@ -56,15 +56,20 @@ process_execute (const char *file_name)
     // temp = palloc_get_page(0);
     arguments->argv[arguments->argc] = palloc_get_page(0);
     if (arguments->argv[arguments->argc] == NULL)
-      return TID_ERROR;
+      tid = TID_ERROR;
     strlcpy (arguments->argv[arguments->argc], temp, PGSIZE);
     arguments->argc++;
   }  
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, arguments);
-  if (tid == TID_ERROR)
+  // sema_down(thread_current()->mutex);
+  // if(tid == -1)
+  //   sema_up()
+  //printf("%d\n", tid);
+  if (tid == TID_ERROR) {
     palloc_free_page (fn_copy); 
+  }
   return tid;
 }
 
@@ -73,6 +78,7 @@ process_execute (const char *file_name)
 static void
 start_process (void *file_name_)
 {
+  printf("inside start_process\n");
   struct args *arguments = (struct args*)file_name_;
   char *file_name = arguments->argv[0];
   struct intr_frame if_;
@@ -268,6 +274,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 bool
 load (struct args *file_name, void (**eip) (void), void **esp) 
 {
+  //printf("inside load\n");
   char *file_ = *file_name->argv;
 
   struct thread *t = thread_current ();
@@ -297,6 +304,8 @@ load (struct args *file_name, void (**eip) (void), void **esp)
       printf ("load: %s: open failed\n", file_);
       goto done; 
     }
+    else
+      //printf("Not null: %s\n", file_);
 
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
@@ -523,7 +532,7 @@ setup_stack (void **esp, struct args *file_name)
 
         myesp = (char*)ROUND_DOWN((uintptr_t)myesp, 4); /* word-align */
         myesp-=4;
-        memcpy(myesp, &file_name->argv[file_name->argc], sizeof(int *)); /* argv[argc] is a null pointer */
+
         /* pushes addresses of arguments onto the stack */
 
         for(i = file_name->argc-1; i >= 0; i--)
@@ -541,7 +550,6 @@ setup_stack (void **esp, struct args *file_name)
         myesp -= 4;
         i = 0;
         memcpy(myesp, &i, sizeof(char *)); /* fake return address */
-        //hex_dump(myesp, myesp, PHYS_BASE - (int)myesp, 1);
         *esp = myesp;
       }
       else

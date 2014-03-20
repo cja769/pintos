@@ -106,6 +106,9 @@ struct thread
     int exit_status;
     struct list children; // a list of copies of this process' children that may be exiting
 
+    //Semaphore for exec synchronization
+    struct semaphore mutex; 
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 

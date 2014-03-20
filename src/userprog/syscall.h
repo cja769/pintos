@@ -6,7 +6,7 @@
 /* Process identifier, from /lib/user/syscall.h. */
 typedef int pid_t;
 #define PID_ERROR ((pid_t) -1)
-int get_arg (int *esp);
+int get_arg (int *esp, bool is_pointer);
 void syscall_init (void);
 void halt (void);
 void exit (int status);

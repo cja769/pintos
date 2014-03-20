@@ -215,14 +215,12 @@ thread_create (const char *name, int priority,
   struct thread *copy;
   copy = palloc_get_page (PAL_ZERO); // Maybe not the greatest idea
   copy->tid = tid;
-  printf("name of original: %s\n", t->name);
   strlcpy (copy->name, name, sizeof t->name);
   copy->status = THREAD_DUMMY;
   list_push_back (&thread_current ()->children, &copy->elem);
 
   /* Add to run queue. */
   thread_unblock (t);
-
   return tid;
 }
 
@@ -485,7 +483,9 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   t->file_index = 0;
+  memset(t->file_list, -1, 128 * sizeof(int *));
   t->wrap_flag = 0;
+  //sema_init(t->mutex,0);
   list_push_back (&all_list, &t->allelem);
 }
 

@@ -11,6 +11,7 @@
 #include "filesys/file.h"
 #include "devices/shutdown.h"
 #include "devices/input.h"
+#include "userprog/pagedir.h"
 #include <string.h>
 #include <stdarg.h> 
 
@@ -42,8 +43,12 @@ void file_index_increment () {
  *   argument 
  */
 int
-get_arg (int *esp)
+get_arg (int *esp, bool is_pointer)
 {
+  if (is_pointer) {
+    if ((int *)*esp == NULL || !is_user_vaddr((int *)*esp) || pagedir_get_page(thread_current()->pagedir, (int *)*esp) == NULL)
+      exit(-1);
+  }
   return *esp;
 }
 
@@ -72,27 +77,38 @@ void exit (int status) {
 
   for (e = list_begin (&t->parent->children); e != list_end (&t->parent->children);
        e = list_next (e))
+  {
+    copy = list_entry (e, struct thread, elem);
+    if (copy->tid == t->tid)
     {
-      copy = list_entry (e, struct thread, elem);
-      if (copy->tid == t->tid)
-      {
-        // Create the zombie process for the parent
-        copy->exit_status = status; 
-        copy->status = THREAD_DYING;
-        //printf ("Creating zombie process!!!\n");
-      }
-      continue; // 'break' to thread_exit ()
+      // Create the zombie process for the parent
+      copy->exit_status = status; 
+      copy->status = THREAD_DYING;
+      //printf ("Creating zombie process!!!\n");
     }
+    continue; // 'break' to thread_exit ()
+  }
 
-  printf ("%s: exit(%d)\n", copy->name, copy->exit_status); // SHOULD WE USE PRINTF HERE?!?
+  char *saveptr;
+  printf ("%s: exit(%d)\n", strtok_r(copy->name, " ", &saveptr), copy->exit_status); // SHOULD WE USE PRINTF HERE?!?
+
+  //Remove copy from child list
+  for (e = list_begin (&t->parent->children); e != list_end (&t->parent->children);
+       e = list_next (e))
+  {
+    if (copy->tid == t->tid)
+    {
+      //remove copy once found
+      list_remove(e);
+    }
+    continue; // 'break' to thread_exit ()
+  }
 
   thread_exit();
 }
 
 pid_t exec (const char *cmd_line) {
-  int tid = process_execute (cmd_line);
-  //printf ("Result from process_execute: %d\n", tid);
-  return tid;
+  return process_execute (cmd_line);
 }
 
 int wait (pid_t pid) {
@@ -101,7 +117,8 @@ int wait (pid_t pid) {
 }
 
 bool create (const char *file, unsigned initial_size) {
-  printf("%s, %d\n", file, initial_size);
+  if (file == NULL)
+    exit(-1);
   return filesys_create (file, initial_size);
 }
 
@@ -111,6 +128,10 @@ bool remove (const char *file) {
 
 int open (const char *file)
 {
+  if (file == NULL) {
+    exit(-1);
+  }
+
   struct thread *t = thread_current ();
   struct file *_file = NULL;
   // printf ("In open: %s\n", file);
@@ -120,8 +141,6 @@ int open (const char *file)
     // printf ("Null file!\n");
     return -1;
   }
-  else
-    // printf("Not null!\n");
   // Put it in thread array file_list
   file_index_increment();
   t->file_list[t->file_index] = palloc_get_page(0);
@@ -133,6 +152,9 @@ int open (const char *file)
 }
 
 int filesize (int fd) {
+  //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
+  if (fd >= 130 || fd < 0)
+      exit(-1);
   struct thread *t = thread_current();
   if (fd >= 2)
     fd -= 2;
@@ -141,11 +163,15 @@ int filesize (int fd) {
 }
 
 int read (int fd, void *buffer, unsigned size) {
+  //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
+  if (fd >= 130 || fd < 0)
+      exit(-1);
   struct thread *t = thread_current();
   if(fd >= 2){
     fd -= 2;
-    struct file *file = t->file_list[fd];
-    return file_read (file, buffer, size);
+    if (t->file_list[fd] == -1)
+      exit(-1);
+    return file_read (t->file_list[fd], buffer, size);
     }
   else if(fd == 0){
     unsigned i ;
@@ -162,11 +188,15 @@ int read (int fd, void *buffer, unsigned size) {
 
 int write (int fd, const void *buffer, unsigned size)
 {
+  //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
+  if (fd >= 130 || fd < 0)
+      exit(-1);
   //Get file name from fd
   if (fd >= 2) {
     fd -= 2;
     struct thread *t = thread_current();
-
+    if (t->file_list[fd] == -1)
+      exit(-1);
     return file_write(t->file_list[fd], buffer, size);
   }
 
@@ -178,29 +208,45 @@ int write (int fd, const void *buffer, unsigned size)
 }
 
 void seek (int fd, unsigned position) {
+  //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
+  if (fd >= 130 || fd < 0)
+      exit(-1);
   struct thread *t = thread_current();
   if (fd >= 2)
     fd -=2;
+  if (t->file_list[fd] == -1)
+      exit(-1);
   struct file *file = t->file_list[fd];
   file_seek (file, position);
 }
 
 unsigned tell (int fd) {
+  //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
+  if (fd >= 130 || fd < 0)
+      exit(-1);
   struct thread *t = thread_current();
   if (fd >= 2)
     fd -=2;
+  if (t->file_list[fd] == -1)
+      exit(-1);
   struct file * file = t->file_list[fd];
   return file_tell (file); 
 }
 
 void close (int fd) {
+  //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
+  if (fd >= 130 || fd < 0)
+      exit(-1);
   struct thread *t = thread_current();
+  // printf("fd: %d\n", t->file_list[fd]);
   if (fd >= 2)
     fd -=2;
-  if (t->file_list[fd] != NULL) {
+  if (t->file_list[fd] == -1)
+      exit(-1);
+  if (t->file_list[fd] != -1) {
     struct file * file = t->file_list[fd];
     file_close (file);
-    t->file_list[fd] = NULL;
+    t->file_list[fd] = -1;
   }
 }
 
@@ -209,9 +255,15 @@ void close (int fd) {
 static void
 syscall_handler (struct intr_frame *f) 
 {
+  if (f->esp == NULL || !is_user_vaddr(f->esp) || pagedir_get_page(thread_current()->pagedir, f->esp) == NULL)
+    exit(-1);
+
   int syscall_number = *(int*)f->esp;
   int *myesp = (int*)f->esp;
   myesp++; // Got syscall_number, increment stack pointer
+
+  if (myesp == NULL || !is_user_vaddr(myesp) || pagedir_get_page(thread_current()->pagedir, myesp) == NULL)
+    exit(-1);
 
   //printf("Syscall number: %d\n", syscall_number);
   // int status;
@@ -231,14 +283,14 @@ syscall_handler (struct intr_frame *f)
     }
 
     case 1: { //EXIT 
-      int status = get_arg(myesp);
+      int status = get_arg(myesp, false);
       f->eax = status; // We might not need this... 
       exit(status);
       break;
     }
 
     case 2: { //EXEC
-      char *cmd_line = (char *)get_arg(myesp);
+      char *cmd_line = (char *)get_arg(myesp, true);
       //printf ("Exec-ing...\n");
       f->eax = exec (cmd_line);
       //printf ("Exec-ed\n");
@@ -246,27 +298,27 @@ syscall_handler (struct intr_frame *f)
     }
 
     case 3: { //WAIT
-      pid_t pid = get_arg(myesp);
+      pid_t pid = get_arg(myesp, false);
       f->eax = wait(pid);
       break;
     }
 
     case 4: { //CREATE
-      char * file = (char *)get_arg(myesp);
+      char * file = (char *)get_arg(myesp, true);
       myesp++;
-      int initial_size = get_arg(myesp);
+      int initial_size = get_arg(myesp, false);
       f->eax = create(file, initial_size);
       break;
     }
 
     case 5: { //REMOVE
-      char * file = (char *)get_arg(myesp);
+      char * file = (char *)get_arg(myesp, true);
       f->eax = remove(file);
       break;
     }
 
     case 6: { // OPEN
-      char *arg = (char *)get_arg (myesp);
+      char *arg = (char *)get_arg (myesp, true);
       // printf ("Opening... %s\n", arg);
       f->eax = open (arg);
       // printf ("Opened\n");
@@ -274,27 +326,27 @@ syscall_handler (struct intr_frame *f)
     }
 
     case 7: { //FILESIZE
-      int fd = get_arg(myesp);
+      int fd = get_arg(myesp, false);
       f->eax = filesize(fd);
       break;
     }
 
     case 8: { //READ
-      int fd = get_arg(myesp);
+      int fd = get_arg(myesp, false);
       myesp++;
-      void * buffer = (void *)get_arg(myesp);
+      void * buffer = (void *)get_arg(myesp, true);
       myesp++;
-      int size = get_arg(myesp);
+      int size = get_arg(myesp, false);
       f->eax = read(fd, buffer, size);
       break;
     }
 
     case 9: { // WRITE
-      int fd = get_arg(myesp);
+      int fd = get_arg(myesp, false);
       myesp++;
-      void * buffer = (void *)get_arg(myesp);
+      void * buffer = (void *)get_arg(myesp, true);
       myesp++;
-      int size = get_arg(myesp);
+      int size = get_arg(myesp, false);
       // printf ("Writing... fd = %d, buffer = %s, size = %u\n", fd, (char *)buffer, size);
       f->eax = write(fd, buffer, size);
       // printf ("Wrote...\n");
@@ -302,21 +354,21 @@ syscall_handler (struct intr_frame *f)
     }
 
     case 10: { //SEEK
-      int fd = get_arg(myesp);
+      int fd = get_arg(myesp, false);
       myesp++;
-      unsigned position = get_arg(myesp);
+      unsigned position = get_arg(myesp, true);
       seek(fd, position);
       break;
     }
 
     case 11: { //TELL
-      int fd = get_arg(myesp);
+      int fd = get_arg(myesp, false);
       f->eax = tell(fd);
       break;
     }
 
     case 12: { //CLOSE
-      int fd = get_arg(myesp);
+      int fd = get_arg(myesp, false);
       // printf("fd: %d\n", fd);
       close(fd);
       break;
