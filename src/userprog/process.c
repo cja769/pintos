@@ -78,7 +78,7 @@ process_execute (const char *file_name)
 static void
 start_process (void *file_name_)
 {
-  printf("inside start_process\n");
+  // printf("inside start_process\n");
   struct args *arguments = (struct args*)file_name_;
   char *file_name = arguments->argv[0];
   struct intr_frame if_;
@@ -142,6 +142,8 @@ process_wait (tid_t child_tid)
       struct thread *copy = list_entry (e, struct thread, elem);
       if (copy->tid == child_tid)
       {
+        if (copy->status == THREAD_DYING)
+          return -1;
         //REMEMBER TO TAKE CHILD COPY OFF OF LIST
         while (copy->status != THREAD_DYING)
         {
@@ -151,11 +153,10 @@ process_wait (tid_t child_tid)
         ASSERT (copy->status == THREAD_DYING); 
         //printf ("Copying exit status... %d\n", copy->exit_status);
         exit_status = copy->exit_status;
-       break;
+        return exit_status;
       } // break
     }
-
-  return exit_status;
+  return -1;
 }
 
 /* Free the current process's resources. */
