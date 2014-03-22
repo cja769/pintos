@@ -19,12 +19,13 @@
 void file_index_increment ();
 static void syscall_handler (struct intr_frame *);
 
-/* file_index_increment - a function to incremement the file index inside the thread struct
+/* file_index_increment - a function to increment the file index inside the thread struct
  *   that wraps around the the beginning of the array if file_index is > >= 128. Once the
  *   index wraps around, it searches for an index in the file_list array that is null  
  *   (i.e. that file has been removed)
  */
 void file_index_increment () {
+  // Calvin drove this method 
   struct thread *t = thread_current();
   int index = t->file_index;
   index--;
@@ -39,12 +40,11 @@ void file_index_increment () {
 }
 
 
-/* get_arg - a function that gets a desired argument from the stack, checking if it is a valid
- *   argument 
- */
+/* get_arg - a function that dereferences an argument from the stack, checking if it is a valid */ 
 int
 get_arg (int *esp, bool is_pointer)
 {
+  // Calvin drove this method
   if (is_pointer) {
     if ((int *)*esp == NULL || !is_user_vaddr((int *)*esp) || pagedir_get_page(thread_current()->pagedir, (int *)*esp) == NULL)
       exit(-1);
@@ -64,7 +64,8 @@ void halt (void) {
   shutdown_power_off();
 }
 
-void exit (int status) {  
+void exit (int status) {
+  // Calvin and Samantha took turns driving this system_call
   /* Get the copy of this thread from the parent, and set its exit status */
   struct thread *t = thread_current ();
 
@@ -81,42 +82,48 @@ void exit (int status) {
       // Create the zombie process for the parent
       copy->exit_status = status; 
       copy->status = THREAD_DYING;
-      // sema_up(&copy->mutex);
-      //printf ("Creating zombie process!!!\n");
       break;
     }
   }
 
   char *saveptr;
-  printf ("%s: exit(%d)\n", strtok_r(copy->name, " ", &saveptr), copy->exit_status); // SHOULD WE USE PRINTF HERE?!?
+  printf ("%s: exit(%d)\n", strtok_r(copy->name, " ", &saveptr), copy->exit_status); 
 
-  sema_up(&copy->mutex);
+  // When a process exits, sema_up to allow its parent to return
+  sema_up(&copy->mutex); 
 
-  /* Close and allow write to files inode */
+  /* Close and allow write to files inode for rox */
   file_allow_write(t->exe);
   file_close(t->exe); 
   thread_exit();
 }
 
 pid_t exec (const char *cmd_line) {
+  // Jason drove this method
+  /* Returns the tid of a new child thread */
   return process_execute (cmd_line);
 }
 
 int wait (pid_t pid) {
-  //printf ("pid: %d\n", pid);
+  // Jason drove this system call
+  /* Blocks the parents thread and returns the exit status of the child that terminated */
   return process_wait (pid);
 }
 
 bool create (const char *file, unsigned initial_size) {
+  // Samantha drove this method
+  /* Create a new file with name file of size initial_size and return true if successful */
   if (file == NULL)
     exit(-1);
   return filesys_create (file, initial_size);
 }
 
 bool remove (const char *file) {
-  bool result;
-  /* Acquire a lock to read */
+  // Samantha drove this method
+  /* Remove a file from the file_sys and return true if successful */
+  /* Acquire a lock to remove from the file_sys */
   lock_acquire(thread_current ()->io_lock);
+  bool result;
   result = filesys_remove (file);
   lock_release (thread_current ()->io_lock);
   return result;
@@ -124,30 +131,30 @@ bool remove (const char *file) {
 
 int open (const char *file)
 {
+  // Calvin and Samantha took turns driving this system_call
+  /* Opens a file in file_sys and returns a file_descriptor for this threads list of open files */
   if (file == NULL) {
     exit(-1);
   }
 
   struct thread *t = thread_current ();
   struct file *_file = NULL;
-  // printf ("In open: %s\n", file);
   _file = filesys_open (file);
   if(_file == NULL)
   {
-    // printf ("Null file!\n");
     return -1;
   }
   // Put it in thread array file_list
   file_index_increment();
   t->file_list[t->file_index] = palloc_get_page(0);
   t->file_list[t->file_index] = _file;
-  // printf("%d\n", *(t->file_list[t->file_index])->blah);
-  // memcpy (t->file_list[t->file_index], file, strlen (file + 1));
   t->file_index++;;
-  return t->file_index + 1; // -1 + 2 GO BACK AND FIX THIS
+  return t->file_index + 1; 
 }
 
 int filesize (int fd) {
+  // Samantha drove this method
+  // Returns the size of a file in file_sys
   //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
   if (fd >= 130 || fd < 0)
       exit(-1);
@@ -159,21 +166,29 @@ int filesize (int fd) {
 }
 
 int read (int fd, void *buffer, unsigned size) {
+  // Calvin and Samantha took turns driving this system_call
+  struct thread *t = thread_current();
+  /* Acquire a lock to read a file in file_sys */
+  lock_acquire(t->io_lock);
   int result;
   //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
   if (fd >= 130 || fd < 0 || fd == 1)
+  {
+	  lock_release (t->io_lock);
       exit(-1);
-  struct thread *t = thread_current();
+  }
+  /* If the file is in file_sys, read and release the lock */
   if(fd >= 2){
     fd -= 2;
     if (t->file_list[fd] == -1)
+	{
+	  lock_release (t->io_lock);
       exit(-1);
-    /* Acquire a lock to read */
-    lock_acquire(thread_current ()->io_lock);
+	}
     result = file_read (t->file_list[fd], buffer, size);
-    lock_release (thread_current ()->io_lock);
+    lock_release (t->io_lock);
     return result;
-    }
+  }
   else if(fd == 0){
     unsigned i ;
     uint8_t *buffer_ = buffer;
@@ -181,39 +196,42 @@ int read (int fd, void *buffer, unsigned size) {
       char temp = input_getc(); // Storing the return value
       memcpy(&temp, buffer_, sizeof(char));
     }
-    /* Acquire a lock to read */
-    lock_acquire(thread_current ()->io_lock);
     result = file_read (t->file_list[fd], buffer, size);
-    lock_release (thread_current ()->io_lock);
+    lock_release (t->io_lock);
     return result;
   }
-  /* Acquire a lock to read */
-    lock_acquire(thread_current ()->io_lock);
     result = file_read (t->file_list[fd], buffer, size);
-    lock_release (thread_current ()->io_lock);
+    lock_release (t->io_lock);
     return result;
 }
 
 int write (int fd, const void *buffer, unsigned size)
 {
+  // Calvin and Samantha took turns driving this system_call
+  struct thread *t = thread_current();
+  /* Acquire a lock to write to file_sys */
+  lock_acquire(t->io_lock);
   int result;
-  //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
+  // Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
   if (fd >= 130 || fd < 0)
+  {
+	  lock_release (t->io_lock);
       exit(-1);
-  //Get file name from fd
+  }
+  // Get file name from fd
   if (fd >= 2) {
     fd -= 2;
-    struct thread *t = thread_current();
     if (t->file_list[fd] == -1)
+	{
+	  lock_release (t->io_lock);
       exit(-1);
-    /* Acquire a lock to read */
-    lock_acquire(thread_current ()->io_lock);
+	}
     result = file_write(t->file_list[fd], buffer, size);
-    lock_release (thread_current ()->io_lock);
+    lock_release (t->io_lock);
     return result;
   }
 
-  //Special case for writing to console
+  // Special case for writing to console
   if (fd == 1) {
     putbuf((char *)buffer, size);
   }
@@ -221,7 +239,8 @@ int write (int fd, const void *buffer, unsigned size)
 }
 
 void seek (int fd, unsigned position) {
-  //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
+  // Samantha drove this method
+  // Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
   if (fd >= 130 || fd < 0)
       exit(-1);
   struct thread *t = thread_current();
@@ -234,7 +253,8 @@ void seek (int fd, unsigned position) {
 }
 
 unsigned tell (int fd) {
-  //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
+  // Samantha drove this method
+  // Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
   if (fd >= 130 || fd < 0)
       exit(-1);
   struct thread *t = thread_current();
@@ -247,11 +267,11 @@ unsigned tell (int fd) {
 }
 
 void close (int fd) {
-  //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
+  // Calvin and Samantha took turns driving this system_call
+  // Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
   if (fd >= 130 || fd < 0)
       exit(-1);
   struct thread *t = thread_current();
-  // printf("fd: %d\n", t->file_list[fd]);
   if (fd >= 2)
     fd -=2;
   if (t->file_list[fd] == -1)
@@ -260,13 +280,13 @@ void close (int fd) {
     struct file * file = t->file_list[fd];
     file_close (file);
     t->file_list[fd] = -1;
-    //file_allow_write (file); /* Reset the inode */
   }
 }
 
 static void
 syscall_handler (struct intr_frame *f) 
 {
+  // Dustin, Jason, Samantha, and Calvin took turns driving this method
   if (f->esp == NULL || !is_user_vaddr(f->esp) || pagedir_get_page(thread_current()->pagedir, f->esp) == NULL)
     exit(-1);
 
@@ -277,17 +297,9 @@ syscall_handler (struct intr_frame *f)
   if (myesp == NULL || !is_user_vaddr(myesp) || pagedir_get_page(thread_current()->pagedir, myesp) == NULL)
     exit(-1);
 
- // printf("Syscall number: %d\n", syscall_number);
-  // int status;
+  /* This is OFTEN used for debugging and tracing the system calls pintos makes */
+  // printf("Syscall number: %d\n", syscall_number);
 
-  // printf ("Syscall: %d\n", syscall_number);
-  // printf ("system call!\n");
-
-  /*while (myesp)
-  {
-    printf ("Myesp: %p %d\n", myesp, *myesp);
-    myesp ++;
-  }*/
   switch (syscall_number) {
     case 0: { //HALT
       halt();
@@ -296,22 +308,20 @@ syscall_handler (struct intr_frame *f)
 
     case 1: { //EXIT 
       int status = get_arg(myesp, false);
-      f->eax = status; // We might not need this... 
+      f->eax = status; // Update register with return value
       exit(status);
       break;
     }
 
     case 2: { //EXEC
       char *cmd_line = (char *)get_arg(myesp, true);
-      //printf ("Exec-ing...\n");
-      f->eax = exec (cmd_line);
-      //printf ("Exec-ed\n");
+      f->eax = exec (cmd_line); // Update register with return value
       break;
     }
 
     case 3: { //WAIT
       pid_t pid = get_arg(myesp, false);
-      f->eax = wait(pid);
+      f->eax = wait(pid); // Update register with return value
       break;
     }
 
@@ -319,27 +329,25 @@ syscall_handler (struct intr_frame *f)
       char * file = (char *)get_arg(myesp, true);
       myesp++;
       int initial_size = get_arg(myesp, false);
-      f->eax = create(file, initial_size);
+      f->eax = create(file, initial_size); // Update register with return value
       break;
     }
 
     case 5: { //REMOVE
       char * file = (char *)get_arg(myesp, true);
-      f->eax = remove(file);
+      f->eax = remove(file); // Update register with return value
       break;
     }
 
     case 6: { // OPEN
       char *arg = (char *)get_arg (myesp, true);
-      // printf ("Opening... %s\n", arg);
-      f->eax = open (arg);
-      // printf ("Opened\n");
+      f->eax = open (arg); // Update register with return value
       break;
     }
 
     case 7: { //FILESIZE
       int fd = get_arg(myesp, false);
-      f->eax = filesize(fd);
+      f->eax = filesize(fd); // Update register with return value
       break;
     }
 
@@ -349,7 +357,7 @@ syscall_handler (struct intr_frame *f)
       void * buffer = (void *)get_arg(myesp, true);
       myesp++;
       int size = get_arg(myesp, false);
-      f->eax = read(fd, buffer, size);
+      f->eax = read(fd, buffer, size); // Update register with return value
       break;
     }
 
@@ -359,9 +367,7 @@ syscall_handler (struct intr_frame *f)
       void * buffer = (void *)get_arg(myesp, true);
       myesp++;
       int size = get_arg(myesp, false);
-      // printf ("Writing... fd = %d, buffer = %s, size = %u\n", fd, (char *)buffer, size);
-      f->eax = write(fd, buffer, size);
-      // printf ("Wrote...\n");
+      f->eax = write(fd, buffer, size); // Update register with return value
       break;
     }
 
@@ -369,27 +375,26 @@ syscall_handler (struct intr_frame *f)
       int fd = get_arg(myesp, false);
       myesp++;
       unsigned position = get_arg(myesp, false);
-      seek(fd, position);
+      seek(fd, position); // Seek to a new position in the file in file_sys
       break;
     }
 
     case 11: { //TELL
       int fd = get_arg(myesp, false);
-      f->eax = tell(fd);
+      f->eax = tell(fd); // Update register with return value
       break;
     }
 
     case 12: { //CLOSE
       int fd = get_arg(myesp, false);
-      // printf("fd: %d\n", fd);
-      close(fd);
+      close(fd); // Close a file in file_sys
       break;
     }
       
     default: 
-      // TODO
-      printf ("Syscall not yet defined!\n");
+      printf ("Syscall not yet defined!\n"); // 
+	  f->eax = -1; // Update register with return value
+	  exit (-1); // If a system call is not defined, safely exit the thread
       break;
   }
-  // thread_exit ();   //Was here originally, but seems wrong
 }

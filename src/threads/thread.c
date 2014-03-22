@@ -102,7 +102,7 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   list_init (&initial_thread->children); // Initialize the initial_thread's list of children
   initial_thread->status = THREAD_RUNNING;
-  initial_thread->io_lock = &io_lock;
+  initial_thread->io_lock = &io_lock; // Initialize the initial_thread's io_lock for rox
   initial_thread->tid = allocate_tid ();
 }
 
@@ -212,13 +212,14 @@ thread_create (const char *name, int priority,
 
   intr_set_level (old_level);
 
-  // Set parent thread to current thread, initialize children semphore
+  /* Dustin drove in this method */
+  // Set parent thread to current thread, initialize children semaphore
   t->parent = thread_current ();
   list_init (&t->children);
 
   // Add this child process to this threads list of children
   struct thread *copy;
-  copy = palloc_get_page (PAL_ZERO); // Maybe not the greatest idea
+  copy = palloc_get_page (PAL_ZERO); 
   copy->tid = tid;
   strlcpy (copy->name, name, sizeof t->name);
   copy->status = THREAD_DUMMY;
@@ -488,12 +489,12 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
-  t->file_index = 0;
+  t->file_index = 0; // Create and set a list of file pointers for file descriptors
   memset(t->file_list, -1, 128 * sizeof(int *));
   t->wrap_flag = 0;
-  t->io_lock = &io_lock;
+  t->io_lock = &io_lock; // Pass a pointer to the main threads io_lock
 
-  sema_init(&t->exec_sema, 0); /* sychronization semaphore, trying to get syn-read/write to work */
+  sema_init(&t->exec_sema, 0); /* Synchronization semaphore, trying to get syn-read/write to work */
 
   list_push_back (&all_list, &t->allelem);
 }
