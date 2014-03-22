@@ -331,14 +331,12 @@ load (struct args *file_name, void (**eip) (void), void **esp)
 
   /* Open executable file. */
   file = filesys_open (file_);
-  file_deny_write (file); /* Sets deny write to files inode */
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_);
       goto done; 
     }
-    else
-      //printf("Not null: %s\n", file_);
+  file_deny_write (file); /* Sets deny write to files inode */
 
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
@@ -423,7 +421,9 @@ load (struct args *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
+
+  thread_current ()->exe = file;
+  //file_close (file);
   //file_allow_write(file);
   return success;
 }

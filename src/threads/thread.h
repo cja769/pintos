@@ -95,6 +95,7 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
 
+    struct file *exe;                   /* The threads executable file */
     struct file *file_list[128];        /* List of pointers to open file structs */
     int file_index;                     /* Index of last open file */
     int wrap_flag;

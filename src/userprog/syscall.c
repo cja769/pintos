@@ -92,6 +92,9 @@ void exit (int status) {
 
   sema_up(&copy->mutex);
 
+  /* Close and allow write to files inode */
+  file_allow_write(t->exe);
+  file_close(t->exe); 
   thread_exit();
 }
 
