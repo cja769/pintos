@@ -37,6 +37,9 @@ static struct thread *initial_thread;
 /* Lock used by allocate_tid(). */
 static struct lock tid_lock;
 
+/* Lock used to read and write */
+static struct lock io_lock;
+
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame 
   {
@@ -90,6 +93,7 @@ thread_init (void)
   ASSERT (intr_get_level () == INTR_OFF);
 
   lock_init (&tid_lock);
+  lock_init (&io_lock);
   list_init (&ready_list);
   list_init (&all_list);
 
@@ -98,6 +102,7 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   list_init (&initial_thread->children); // Initialize the initial_thread's list of children
   initial_thread->status = THREAD_RUNNING;
+  initial_thread->io_lock = &io_lock;
   initial_thread->tid = allocate_tid ();
 }
 
@@ -217,6 +222,7 @@ thread_create (const char *name, int priority,
   copy->tid = tid;
   strlcpy (copy->name, name, sizeof t->name);
   copy->status = THREAD_DUMMY;
+  sema_init(&copy->mutex, 0); /* Only the copy needs the mutex */
   list_push_back (&thread_current ()->children, &copy->elem);
 
   /* Add to run queue. */
@@ -485,7 +491,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->file_index = 0;
   memset(t->file_list, -1, 128 * sizeof(int *));
   t->wrap_flag = 0;
-  //sema_init(t->mutex,0);
+  t->io_lock = &io_lock;
+
+  sema_init(&t->exec_sema, 0); /* sychronization semaphore, trying to get syn-read/write to work */
+
   list_push_back (&all_list, &t->allelem);
 }
 

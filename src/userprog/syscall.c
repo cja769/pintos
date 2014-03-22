@@ -64,10 +64,7 @@ void halt (void) {
   shutdown_power_off();
 }
 
-void exit (int status) {
-  /* Find out where to save the exit status... I think Moob told us to 
-     make a struct that has the child element in it for each semaphore? */
-  
+void exit (int status) {  
   /* Get the copy of this thread from the parent, and set its exit status */
   struct thread *t = thread_current ();
 
@@ -84,25 +81,16 @@ void exit (int status) {
       // Create the zombie process for the parent
       copy->exit_status = status; 
       copy->status = THREAD_DYING;
+      // sema_up(&copy->mutex);
       //printf ("Creating zombie process!!!\n");
+      break;
     }
-    continue; // 'break' to thread_exit ()
   }
 
   char *saveptr;
   printf ("%s: exit(%d)\n", strtok_r(copy->name, " ", &saveptr), copy->exit_status); // SHOULD WE USE PRINTF HERE?!?
 
-  //Remove copy from child list
-  for (e = list_begin (&t->parent->children); e != list_end (&t->parent->children);
-       e = list_next (e))
-  {
-    if (copy->tid == t->tid)
-    {
-      //remove copy once found
-      list_remove(e);
-    }
-    continue; // 'break' to thread_exit ()
-  }
+  sema_up(&copy->mutex);
 
   thread_exit();
 }
@@ -123,7 +111,12 @@ bool create (const char *file, unsigned initial_size) {
 }
 
 bool remove (const char *file) {
-  return filesys_remove (file);
+  bool result;
+  /* Acquire a lock to read */
+  lock_acquire(thread_current ()->io_lock);
+  result = filesys_remove (file);
+  lock_release (thread_current ()->io_lock);
+  return result;
 }
 
 int open (const char *file)
@@ -163,15 +156,20 @@ int filesize (int fd) {
 }
 
 int read (int fd, void *buffer, unsigned size) {
+  int result;
   //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
-  if (fd >= 130 || fd < 0)
+  if (fd >= 130 || fd < 0 || fd == 1)
       exit(-1);
   struct thread *t = thread_current();
   if(fd >= 2){
     fd -= 2;
     if (t->file_list[fd] == -1)
       exit(-1);
-    return file_read (t->file_list[fd], buffer, size);
+    /* Acquire a lock to read */
+    lock_acquire(thread_current ()->io_lock);
+    result = file_read (t->file_list[fd], buffer, size);
+    lock_release (thread_current ()->io_lock);
+    return result;
     }
   else if(fd == 0){
     unsigned i ;
@@ -180,14 +178,22 @@ int read (int fd, void *buffer, unsigned size) {
       char temp = input_getc(); // Storing the return value
       memcpy(&temp, buffer_, sizeof(char));
     }
-    return size;
+    /* Acquire a lock to read */
+    lock_acquire(thread_current ()->io_lock);
+    result = file_read (t->file_list[fd], buffer, size);
+    lock_release (thread_current ()->io_lock);
+    return result;
   }
-
-  return 0; // Control never reaches here
+  /* Acquire a lock to read */
+    lock_acquire(thread_current ()->io_lock);
+    result = file_read (t->file_list[fd], buffer, size);
+    lock_release (thread_current ()->io_lock);
+    return result;
 }
 
 int write (int fd, const void *buffer, unsigned size)
 {
+  int result;
   //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
   if (fd >= 130 || fd < 0)
       exit(-1);
@@ -197,7 +203,11 @@ int write (int fd, const void *buffer, unsigned size)
     struct thread *t = thread_current();
     if (t->file_list[fd] == -1)
       exit(-1);
-    return file_write(t->file_list[fd], buffer, size);
+    /* Acquire a lock to read */
+    lock_acquire(thread_current ()->io_lock);
+    result = file_write(t->file_list[fd], buffer, size);
+    lock_release (thread_current ()->io_lock);
+    return result;
   }
 
   //Special case for writing to console
@@ -247,10 +257,9 @@ void close (int fd) {
     struct file * file = t->file_list[fd];
     file_close (file);
     t->file_list[fd] = -1;
+    //file_allow_write (file); /* Reset the inode */
   }
 }
-
-
 
 static void
 syscall_handler (struct intr_frame *f) 
@@ -265,7 +274,7 @@ syscall_handler (struct intr_frame *f)
   if (myesp == NULL || !is_user_vaddr(myesp) || pagedir_get_page(thread_current()->pagedir, myesp) == NULL)
     exit(-1);
 
-  //printf("Syscall number: %d\n", syscall_number);
+ // printf("Syscall number: %d\n", syscall_number);
   // int status;
 
   // printf ("Syscall: %d\n", syscall_number);
@@ -356,7 +365,7 @@ syscall_handler (struct intr_frame *f)
     case 10: { //SEEK
       int fd = get_arg(myesp, false);
       myesp++;
-      unsigned position = get_arg(myesp, true);
+      unsigned position = get_arg(myesp, false);
       seek(fd, position);
       break;
     }

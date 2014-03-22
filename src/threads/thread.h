@@ -95,7 +95,7 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
 
-    struct file *file_list[128];              /* List of pointers to open file structs */
+    struct file *file_list[128];        /* List of pointers to open file structs */
     int file_index;                     /* Index of last open file */
     int wrap_flag;
 
@@ -106,8 +106,14 @@ struct thread
     int exit_status;
     struct list children; // a list of copies of this process' children that may be exiting
 
-    //Semaphore for exec synchronization
+    // Semaphore for wait synchronization
     struct semaphore mutex; 
+
+    // Semaphore for exec synchronization
+    struct semaphore exec_sema; 
+
+    /* Lock for io synchronization */
+    struct lock *io_lock;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */

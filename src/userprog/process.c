@@ -29,6 +29,8 @@ tid_t
 process_execute (const char *file_name) 
 {
   struct args *arguments = palloc_get_page(0);
+  struct thread *t = thread_current();
+  struct list_elem *e;
 
   char *fn_copy;
   tid_t tid;
@@ -40,14 +42,14 @@ process_execute (const char *file_name)
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
   if (fn_copy == NULL)
-    tid = TID_ERROR;
+    return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
   char *temp = palloc_get_page(0);
   temp = strtok_r(fn_copy, " ", &saveptr);
   arguments->argv = palloc_get_page(0);
   arguments->argv[arguments->argc] = palloc_get_page(0);
   if (arguments->argv[arguments->argc] == NULL || arguments->argv == NULL)
-    tid = TID_ERROR;
+    return TID_ERROR;
   strlcpy (arguments->argv[arguments->argc], temp, PGSIZE);
   arguments->argc++;
   arguments->argv[arguments->argc] = palloc_get_page(0);
@@ -56,16 +58,21 @@ process_execute (const char *file_name)
     // temp = palloc_get_page(0);
     arguments->argv[arguments->argc] = palloc_get_page(0);
     if (arguments->argv[arguments->argc] == NULL)
-      tid = TID_ERROR;
+      return TID_ERROR;
     strlcpy (arguments->argv[arguments->argc], temp, PGSIZE);
     arguments->argc++;
   }  
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, arguments);
-  // sema_down(thread_current()->mutex);
-  // if(tid == -1)
-  //   sema_up()
+  sema_down(&thread_current()->exec_sema);
+  for (e = list_begin (&t->children); e != list_end (&t->children);
+       e = list_next (e))
+    {
+      struct thread *copy = list_entry (e, struct thread, elem);
+      if (copy->tid == tid && copy->exit_status == -1)
+        tid = -1;
+    }
   //printf("%d\n", tid);
   if (tid == TID_ERROR) {
     palloc_free_page (fn_copy); 
@@ -79,6 +86,10 @@ static void
 start_process (void *file_name_)
 {
   // printf("inside start_process\n");
+  //used to loop through children list
+  struct thread *t = thread_current();
+  struct list_elem *e;
+
   struct args *arguments = (struct args*)file_name_;
   char *file_name = arguments->argv[0];
   struct intr_frame if_;
@@ -99,8 +110,19 @@ start_process (void *file_name_)
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
+  {
+    for (e = list_begin (&t->parent->children); e != list_end (&t->parent->children);
+       e = list_next (e))
+    {
+      struct thread *copy = list_entry (e, struct thread, elem);
+      if (copy->tid == thread_current()->tid)
+        copy->exit_status = -1;
+    }
+    sema_up(&thread_current()->parent->exec_sema);
     thread_exit ();
+  }
 
+  sema_up(&thread_current()->parent->exec_sema);
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -142,20 +164,29 @@ process_wait (tid_t child_tid)
       struct thread *copy = list_entry (e, struct thread, elem);
       if (copy->tid == child_tid)
       {
-        if (copy->status == THREAD_DYING)
-          return -1;
+        // if (copy->status == THREAD_DYING)
+        // {
+        //   //printf ("Returning -1 in process wait: 1\n");
+        //   list_remove (e);
+        //   return -1;
+        // }
         //REMEMBER TO TAKE CHILD COPY OFF OF LIST
         while (copy->status != THREAD_DYING)
         {
-          thread_yield();
+          //printf("Yielding\n");
+          sema_down(&copy->mutex);
+          //thread_yield();
         }
 
         ASSERT (copy->status == THREAD_DYING); 
         //printf ("Copying exit status... %d\n", copy->exit_status);
         exit_status = copy->exit_status;
+        //printf ("Returning exit_status in process wait: 2\n");
+        list_remove (e);
         return exit_status;
       } // break
     }
+    //printf ("Returning -1 in process wait: 3\n");
   return -1;
 }
 
@@ -300,6 +331,7 @@ load (struct args *file_name, void (**eip) (void), void **esp)
 
   /* Open executable file. */
   file = filesys_open (file_);
+  file_deny_write (file); /* Sets deny write to files inode */
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_);
@@ -392,6 +424,7 @@ load (struct args *file_name, void (**eip) (void), void **esp)
  done:
   /* We arrive here whether the load is successful or not. */
   file_close (file);
+  //file_allow_write(file);
   return success;
 }
 
