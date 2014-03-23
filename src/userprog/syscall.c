@@ -168,13 +168,10 @@ int filesize (int fd) {
 int read (int fd, void *buffer, unsigned size) {
   // Calvin and Samantha took turns driving this system_call
   struct thread *t = thread_current();
-  /* Acquire a lock to read a file in file_sys */
-  lock_acquire(t->io_lock);
   int result;
   //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
   if (fd >= 130 || fd < 0 || fd == 1)
   {
-	  lock_release (t->io_lock);
       exit(-1);
   }
   /* If the file is in file_sys, read and release the lock */
@@ -182,9 +179,10 @@ int read (int fd, void *buffer, unsigned size) {
     fd -= 2;
     if (t->file_list[fd] == -1)
 	{
-	  lock_release (t->io_lock);
       exit(-1);
 	}
+		/* Acquire a lock to read a file in file_sys */
+    lock_acquire(t->io_lock);
     result = file_read (t->file_list[fd], buffer, size);
     lock_release (t->io_lock);
     return result;
@@ -196,10 +194,14 @@ int read (int fd, void *buffer, unsigned size) {
       char temp = input_getc(); // Storing the return value
       memcpy(&temp, buffer_, sizeof(char));
     }
+    /* Acquire a lock to read a file in file_sys */
+    lock_acquire(t->io_lock);
     result = file_read (t->file_list[fd], buffer, size);
     lock_release (t->io_lock);
     return result;
   }
+		/* Acquire a lock to read a file in file_sys */
+    lock_acquire(t->io_lock);
     result = file_read (t->file_list[fd], buffer, size);
     lock_release (t->io_lock);
     return result;
@@ -209,13 +211,10 @@ int write (int fd, const void *buffer, unsigned size)
 {
   // Calvin and Samantha took turns driving this system_call
   struct thread *t = thread_current();
-  /* Acquire a lock to write to file_sys */
-  lock_acquire(t->io_lock);
   int result;
   // Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
   if (fd >= 130 || fd < 0)
   {
-	  lock_release (t->io_lock);
       exit(-1);
   }
   // Get file name from fd
@@ -223,9 +222,10 @@ int write (int fd, const void *buffer, unsigned size)
     fd -= 2;
     if (t->file_list[fd] == -1)
 	{
-	  lock_release (t->io_lock);
       exit(-1);
 	}
+		/* Acquire a lock to write to file_sys */
+    lock_acquire(t->io_lock);
     result = file_write(t->file_list[fd], buffer, size);
     lock_release (t->io_lock);
     return result;
