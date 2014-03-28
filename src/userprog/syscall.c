@@ -169,7 +169,7 @@ int read (int fd, void *buffer, unsigned size) {
   // Calvin and Samantha took turns driving this system_call
   struct thread *t = thread_current();
   int result;
-  //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
+  // Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
   if (fd >= 130 || fd < 0 || fd == 1)
   {
       exit(-1);
@@ -235,7 +235,7 @@ int write (int fd, const void *buffer, unsigned size)
   if (fd == 1) {
     putbuf((char *)buffer, size);
   }
-  return 0;
+  return size;
 }
 
 void seek (int fd, unsigned position) {

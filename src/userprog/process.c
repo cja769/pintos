@@ -28,9 +28,6 @@ static bool load (struct args *file_name, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name) 
 {
-  // Dustin and Jason drove this method
-  /* A struct to store the command line and number of
-     arguments for each new process */
   struct args *arguments = palloc_get_page(0);
   struct thread *t = thread_current();
   struct list_elem *e;
@@ -38,7 +35,7 @@ process_execute (const char *file_name)
   char *fn_copy;
   tid_t tid;
 
-  char *saveptr;// /* Used for strtok_r */
+  char *saveptr;// = palloc_get_page(0);              /* Used for strtok_r */
   arguments->argc = 0;
 
   /* Make a copy of FILE_NAME.
@@ -47,7 +44,7 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-  char *temp = palloc_get_page(0); 
+  char *temp = palloc_get_page(0);
   temp = strtok_r(fn_copy, " ", &saveptr);
   arguments->argv = palloc_get_page(0);
   arguments->argv[arguments->argc] = palloc_get_page(0);
@@ -56,19 +53,19 @@ process_execute (const char *file_name)
   strlcpy (arguments->argv[arguments->argc], temp, PGSIZE);
   arguments->argc++;
   arguments->argv[arguments->argc] = palloc_get_page(0);
-  while((temp = strtok_r(NULL, " ", &saveptr)) != NULL){ /* Parse the command line and store them in args */
+  while((temp = strtok_r(NULL, " ", &saveptr)) != NULL){
+    // palloc_free_page(temp);
+    // temp = palloc_get_page(0);
     arguments->argv[arguments->argc] = palloc_get_page(0);
     if (arguments->argv[arguments->argc] == NULL)
       return TID_ERROR;
     strlcpy (arguments->argv[arguments->argc], temp, PGSIZE);
-    arguments->argc++; // Increment the number of args
+    arguments->argc++;
   }  
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, arguments);
-  /* The parent thread running this method will wait for exec to finish
-	 If the child process failed to load, this method returns -1 */
-  sema_down(&thread_current()->exec_sema); 
+  sema_down(&thread_current()->exec_sema);
   for (e = list_begin (&t->children); e != list_end (&t->children);
        e = list_next (e))
     {
@@ -88,16 +85,20 @@ process_execute (const char *file_name)
 static void
 start_process (void *file_name_)
 {
-  // Dustin and Jason drove this method
+  // printf("inside start_process\n");
   //used to loop through children list
   struct thread *t = thread_current();
   struct list_elem *e;
 
-  // Create the struct args and store the command line 
   struct args *arguments = (struct args*)file_name_;
   char *file_name = arguments->argv[0];
   struct intr_frame if_;
   bool success;
+
+  // int j;
+  // for (j = 0; j < 4; j++) {
+  //   printf("%s\n", arguments->argv[j]);
+  // }
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -106,8 +107,7 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (arguments, &if_.eip, &if_.esp);
 
-  /* If load failed, quit and set the parents copy of this threads exit status to 0, 
-     otherwise allow the parent to continue after exec by calling sema_up */
+  /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
   {
@@ -121,6 +121,7 @@ start_process (void *file_name_)
     sema_up(&thread_current()->parent->exec_sema);
     thread_exit ();
   }
+
   sema_up(&thread_current()->parent->exec_sema);
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -144,35 +145,48 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid) 
 {
-  // Jason drove this method
+  //Find thread with given tid (part of thread struct)
+  //While loop (?) until thread status is DYING or something
+  //Get exit status from f->eax (somehow)
+  //Exit status will be weird if terminated by kernal
+  //Somehow check if process_wait has been called for this thread
+  //  (Maybe add boolean to thread struct?)
+  //
   struct thread *t = thread_current ();
+  //printf("param tid: %d, thread tid: %d\n", child_tid, t->tid);
 
   struct list_elem *e;
   int exit_status;
 
-  /* Iterate through the parents list of children and find a match with child_tid.
-     If a child is found and has already terminated, remove the thread from this threads list of
-	 children and return with its exit status. Otherwise, call sema_down to wait for the
-	 child process to terminate or call sema_up. */
   for (e = list_begin (&t->children); e != list_end (&t->children);
        e = list_next (e))
     {
       struct thread *copy = list_entry (e, struct thread, elem);
       if (copy->tid == child_tid)
       {
+        // if (copy->status == THREAD_DYING)
+        // {
+        //   //printf ("Returning -1 in process wait: 1\n");
+        //   list_remove (e);
+        //   return -1;
+        // }
+        //REMEMBER TO TAKE CHILD COPY OFF OF LIST
         while (copy->status != THREAD_DYING)
         {
+          //printf("Yielding\n");
           sema_down(&copy->mutex);
+          //thread_yield();
         }
 
         ASSERT (copy->status == THREAD_DYING); 
+        //printf ("Copying exit status... %d\n", copy->exit_status);
         exit_status = copy->exit_status;
+        //printf ("Returning exit_status in process wait: 2\n");
         list_remove (e);
         return exit_status;
       } // break
     }
-	
-  // If control reaches here, the thread child_tid does not exist
+    //printf ("Returning -1 in process wait: 3\n");
   return -1;
 }
 
@@ -292,7 +306,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 bool
 load (struct args *file_name, void (**eip) (void), void **esp) 
 {
-  // Dustin drove this method
+  //printf("inside load\n");
   char *file_ = *file_name->argv;
 
   struct thread *t = thread_current ();
@@ -302,20 +316,29 @@ load (struct args *file_name, void (**eip) (void), void **esp)
   bool success = false;
   int i;
 
+  // int j;
+  // for (j = 0; j < 4; j++) {
+  //   printf("%s\n", file_name->argv[j]);
+  // }
+
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL) 
     goto done;
   process_activate ();
 
+  //printf("File name: %s\n", file_);
+
   /* Open executable file. */
   file = filesys_open (file_);
+  file_deny_write (file); /* Sets deny write to files inode */
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_);
       goto done; 
     }
-  file_deny_write (file); /* Sets deny write to files inode */
+    else
+      //printf("Not null: %s\n", file_);
 
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
@@ -400,8 +423,8 @@ load (struct args *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-
-  thread_current ()->exe = file;
+  //file_close (file);
+  //file_allow_write(file);
   return success;
 }
 
@@ -518,13 +541,12 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp, struct args *file_name) 
 {
-  /* Dustin and Jason drove this method */
   uint8_t *kpage;
   bool success = false;
   int i;
   char *myesp;
-  int addr[file_name->argc]; /* To store the address of each argument we push on the stack */
-  int addr_argv; /* To store the address of the first pointer on the stack */
+  int addr[file_name->argc]; /* to store the address of each argument we push on the stack */
+  int addr_argv;
 
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
@@ -533,21 +555,20 @@ setup_stack (void **esp, struct args *file_name)
       if (success)
       {
         *esp = PHYS_BASE;
-        myesp = (char*)*esp; // Modify a copy of myesp for easier arithmetic, and set esp at the end
-        /* Pushes command line onto the stack from right to left */
+        myesp = (char*)*esp;
+        /* pushes command line onto the stack from right to left */
         for(i = file_name->argc-1; i >= 0; i--)
         {
           myesp -= (strlen(file_name->argv[i]) + 1);
-          addr[i] = (int)myesp; /* Save the address of each argument on the stack */
+          addr[i] = (int)myesp; /* save the address of each argument on the stack */
           strlcpy(myesp, file_name->argv[i], strlen(file_name->argv[i]) + 1);
         }
 
-		// Jason drove here
         myesp = (char*)ROUND_DOWN((uintptr_t)myesp, 4); /* word-align */
-        myesp -= 4;
+        myesp-=4;
 
-		// Dustin drove here
-        /* Pushes addresses of arguments onto the stack */
+        /* pushes addresses of arguments onto the stack */
+
         for(i = file_name->argc-1; i >= 0; i--)
         {
           myesp -= 4;
@@ -555,13 +576,14 @@ setup_stack (void **esp, struct args *file_name)
           if(i == 0)
             memcpy(&addr_argv, &myesp, sizeof(int));
         }
+        //hex_dump(myesp, myesp, PHYS_BASE - (int)myesp, 1);
         myesp -= 4;
-        memcpy(myesp, &addr_argv, sizeof(int *)); /* Pushes the address of argv onto the stack */
+        memcpy(myesp, &addr_argv, sizeof(int *)); /* pushes argv onto the stack */
         myesp -= 4;
-        memcpy(myesp, &(file_name->argc), sizeof(int)); /* Pushes argc onto the stack */
+        memcpy(myesp, &(file_name->argc), sizeof(int)); /* pushes argc onto the stack */
         myesp -= 4;
         i = 0;
-        memcpy(myesp, &i, sizeof(char *)); /* Fake return address */
+        memcpy(myesp, &i, sizeof(char *)); /* fake return address */
         *esp = myesp;
       }
       else
