@@ -1,4 +1,5 @@
 #include "threads/init.h"
+#include "vm/frame.h"
 #include <console.h>
 #include <debug.h>
 #include <inttypes.h>
@@ -127,6 +128,9 @@ main (void)
   filesys_init (format_filesys);
 #endif
 
+  //*******************************************//
+  frame_table_init();      // initializes our frame table (good of place as any)
+  //*******************************************//
   printf ("Boot complete.\n");
   
   /* Run actions specified on kernel command line. */
@@ -160,7 +164,6 @@ paging_init (void)
   uint32_t *pd, *pt;
   size_t page;
   extern char _start, _end_kernel_text;
-
   pd = init_page_dir = palloc_get_page (PAL_ASSERT | PAL_ZERO);
   pt = NULL;
   for (page = 0; page < init_ram_pages; page++)

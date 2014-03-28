@@ -112,11 +112,6 @@ void *
 palloc_get_page (enum palloc_flags flags) 
 {
   void *page = palloc_get_multiple (flags, 1);
-  if (flags & PAL_USER)
-  {  
-    struct frame *frame_ptr = get_frame();
-    frame_ptr->occupier = page;
-  }
   return page;
 }
 

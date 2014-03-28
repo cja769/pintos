@@ -17,6 +17,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "vm/frame.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (struct args *file_name, void (**eip) (void), void **esp);
@@ -509,7 +510,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
       /* Get a page of memory. */
-      uint8_t *kpage = palloc_get_page (PAL_USER);
+      uint8_t *kpage = (uint8_t *) get_page ();  // changed to our method and did a janky cast
       if (kpage == NULL)
         return false;
 
@@ -548,7 +549,7 @@ setup_stack (void **esp, struct args *file_name)
   int addr[file_name->argc]; /* to store the address of each argument we push on the stack */
   int addr_argv;
 
-  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+  kpage = (uint8_t *) get_page (); // changed to our method and did a janky cast
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
