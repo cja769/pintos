@@ -322,6 +322,9 @@ load (struct args *file_name, void (**eip) (void), void **esp)
   //   printf("%s\n", file_name->argv[j]);
   // }
 
+  /* Initialize the supplemental page table */
+  supp_page_table_init ();
+
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL) 
@@ -403,10 +406,14 @@ load (struct args *file_name, void (**eip) (void), void **esp)
                   read_bytes = 0;
                   zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
                 }
-              if (!load_segment (file, file_page, (void *) mem_page,
+              if (!load_supp_segment (file, file_page, (void *) mem_page,
                                  read_bytes, zero_bytes, writable))
                 goto done;
             }
+                /* Load the information about the segment into the supp_page_table */
+                /*if (!load_supp_page (file, file_page, (void *) mem_page, 
+                                 read_bytes, zero_bytes, writable))
+                goto done;*/
           else
             goto done;
           break;
@@ -509,8 +516,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
-      /* Get a page of memory. */
-      uint8_t *kpage = (uint8_t *) get_page ();  // changed to our method and did a janky cast
+      /* Get a frame of memory. */
+      uint8_t *kpage = (uint8_t *) get_frame ();  // changed to our method and did a janky cast
       if (kpage == NULL)
         return false;
 
@@ -537,6 +544,31 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   return true;
 }
 
+static bool
+load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
+              uint32_t read_bytes, uint32_t zero_bytes, bool writable) 
+{
+  ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
+  ASSERT (pg_ofs (upage) == 0);
+  ASSERT (ofs % PGSIZE == 0);
+
+  file_seek (file, ofs);
+  while (read_bytes > 0 || zero_bytes > 0) 
+    {
+      /* Calculate how to fill this page.
+         We will read PAGE_READ_BYTES bytes from FILE
+         and zero the final PAGE_ZERO_BYTES bytes. */
+      size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+      size_t page_zero_bytes = PGSIZE - page_read_bytes;
+
+      /* Advance. */
+      read_bytes -= page_read_bytes;
+      zero_bytes -= page_zero_bytes;
+      upage += PGSIZE;
+    }
+  return true;
+}
+
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
@@ -549,7 +581,7 @@ setup_stack (void **esp, struct args *file_name)
   int addr[file_name->argc]; /* to store the address of each argument we push on the stack */
   int addr_argv;
 
-  kpage = (uint8_t *) get_page (); // changed to our method and did a janky cast
+  kpage = (uint8_t *) get_frame (); // changed to our method and did a janky cast
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);

@@ -155,6 +155,10 @@ page_fault (struct intr_frame *f)
   if (user && (!is_user_vaddr(fault_addr) || fault_addr == NULL))
     exit(-1);
 
+  /*******************************************
+    CALL LOAD_SEGMENT!!!!
+    ******************************************/
+
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
