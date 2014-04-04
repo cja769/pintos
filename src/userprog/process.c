@@ -18,9 +18,12 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "vm/frame.h"
+#include "vm/page.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (struct args *file_name, void (**eip) (void), void **esp);
+static bool load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
+              uint32_t read_bytes, uint32_t zero_bytes, bool writable);
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -296,7 +299,7 @@ struct Elf32_Phdr
 
 static bool setup_stack (void **esp, struct args *file_name);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
-static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
+bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
                           bool writable);
 
@@ -406,9 +409,12 @@ load (struct args *file_name, void (**eip) (void), void **esp)
                   read_bytes = 0;
                   zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
                 }
+
               if (!load_supp_segment (file, file_page, (void *) mem_page,
-                                 read_bytes, zero_bytes, writable))
+                                 read_bytes, zero_bytes, writable)) {
+
                 goto done;
+              }
             }
                 /* Load the information about the segment into the supp_page_table */
                 /*if (!load_supp_page (file, file_page, (void *) mem_page, 
@@ -499,13 +505,14 @@ validate_segment (const struct Elf32_Phdr *phdr, struct file *file)
 
    Return true if successful, false if a memory allocation error
    or disk read error occurs. */
-static bool
+bool
 load_segment (struct file *file, off_t ofs, uint8_t *upage,
               uint32_t read_bytes, uint32_t zero_bytes, bool writable) 
 {
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
+  printf("something\n");
 
   file_seek (file, ofs);
   while (read_bytes > 0 || zero_bytes > 0) 
@@ -517,7 +524,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
       /* Get a frame of memory. */
-      uint8_t *kpage = (uint8_t *) get_frame ();  // changed to our method and did a janky cast
+      uint8_t *kpage = (uint8_t *) get_frame (upage);  // changed to our method and did a janky cast
       if (kpage == NULL)
         return false;
 
@@ -533,6 +540,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       if (!install_page (upage, kpage, writable)) 
         {
           palloc_free_page (kpage);
+
           return false; 
         }
 
@@ -551,6 +559,8 @@ load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
+
+  load_supp_page(file, ofs, (void *) upage, read_bytes, zero_bytes, writable);
 
   file_seek (file, ofs);
   while (read_bytes > 0 || zero_bytes > 0) 
@@ -581,7 +591,7 @@ setup_stack (void **esp, struct args *file_name)
   int addr[file_name->argc]; /* to store the address of each argument we push on the stack */
   int addr_argv;
 
-  kpage = (uint8_t *) get_frame (); // changed to our method and did a janky cast
+  kpage = (uint8_t *) get_frame (NULL); // changed to our method and did a janky cast
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);

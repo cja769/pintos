@@ -6,6 +6,9 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/syscall.h"
+#include "vm/page.h"
+#include "userprog/process.h"
+#include "threads/pte.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -155,21 +158,40 @@ page_fault (struct intr_frame *f)
   if (user && (!is_user_vaddr(fault_addr) || fault_addr == NULL))
     exit(-1);
 
-  /*******************************************
-    CALL LOAD_SEGMENT!!!!
-    ******************************************/
+  bool loaded = false;
 
-  /* To implement virtual memory, delete the rest of the function
+
+  test_frame_table(383);
+
+  struct list_elem *e;
+  for (e = list_begin (&thread_current()->supp_page_table); e != list_end(&thread_current()->supp_page_table) && !loaded; e = list_next(e))
+    {
+        struct supp_page *p = list_entry (e, struct supp_page, suppelem);
+        printf("fault_addr: %08X, p->ofs: %08X, p->read_bytes: %08X, p->upage: %08X, p->zero_bytes: %08X\n", 
+          fault_addr, p->ofs, p->read_bytes, p->upage, p->zero_bytes);
+        printf("fault pt_no: %d, upage pt_no: %d\n", pt_no(fault_addr), pt_no(p->upage));
+        if (pt_no(fault_addr) == pt_no(p->upage)) {
+          loaded = load_segment(p->file, p->ofs, p->upage, p->read_bytes, p->zero_bytes, p->writable);
+        }
+    }
+
+    test_frame_table(383);
+
+
+  if (loaded)
+    printf("loaded\n");
+  else {
+      /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
-  printf ("Page fault at %p: %s error %s page in %s context.\n",
-          fault_addr,
-          not_present ? "not present" : "rights violation",
-          write ? "writing" : "reading",
-          user ? "user" : "kernel");
+    printf ("Page fault at %p: %s error %s page in %s context.\n",
+            fault_addr,
+            not_present ? "not present" : "rights violation",
+            write ? "writing" : "reading",
+            user ? "user" : "kernel");
 
-  printf("There is no crying in Pintos!\n");
-
-  kill (f);
+    printf("There is no crying in Pintos!\n");
+    kill (f);
+  }
 }
 
