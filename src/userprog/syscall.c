@@ -298,7 +298,7 @@ syscall_handler (struct intr_frame *f)
     exit(-1);
 
   /* This is OFTEN used for debugging and tracing the system calls pintos makes */
-  printf("Syscall number: %d\n", syscall_number);
+  // printf("Syscall number: %d\n", syscall_number);
 
   switch (syscall_number) {
     case 0: { //HALT

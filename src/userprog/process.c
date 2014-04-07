@@ -573,7 +573,7 @@ load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
-      load_supp_page(file, ofs, (void *) upage, page_read_bytes, page_zero_bytes, true);//writable); DONT FORGET YOU DID THIS
+      load_supp_page(file, ofs, (void *) upage, page_read_bytes, page_zero_bytes, writable); 
 
       /* Advance. */
       read_bytes -= page_read_bytes;
