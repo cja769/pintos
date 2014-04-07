@@ -3,8 +3,6 @@
 
 #define NUM_FRAMES 383
 
-static int free_frames;				// The max number of frames in the frame table
-
 // /* Frame Table Structure  -- may not need this, can put list somewhere else */
 // struct frame_table {
 	// MIGHT USE ARRAY, EASIER IF WE CAN (MORE EFFIECIENT)
@@ -25,4 +23,5 @@ struct frame * frame_evict (void);
 struct frame * frame_create (void);
 void test_frame_table(int max);
 void frame_table_init (void);
-struct frame * frame_delete (void);
+bool return_frame (uint32_t addr);
+

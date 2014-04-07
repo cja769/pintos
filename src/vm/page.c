@@ -9,7 +9,6 @@
 /* Initialize this supplemental page table */
 void supp_page_table_init () {
 	list_init(&thread_current ()->supp_page_table);
-
 }
 
 /* Rather than loading a segment into a user page, record the segment of the
@@ -25,6 +24,7 @@ bool load_supp_page(struct file *file, off_t ofs, uint8_t *upage,
 	p->read_bytes = read_bytes;
 	p->zero_bytes = zero_bytes;
 	p->writable = writable;
+  p->present = false;
 	list_push_back(&thread_current ()->supp_page_table, &p->suppelem);
 	test_supp_page_table();
 	return true;

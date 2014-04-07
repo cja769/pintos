@@ -28,6 +28,7 @@ struct supp_page {
 	uint32_t read_bytes;
 	uint32_t zero_bytes;
 	bool writable;
+  bool present;
 
 	struct list_elem suppelem;
 };

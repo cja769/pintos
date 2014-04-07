@@ -7,6 +7,7 @@
 #include "threads/thread.h"
 
 // static struct frame_table *ftb;						// Stores the one and only frame table
+int free_frames;				// The max number of frames in the frame table
 
 /* Initialize this file */
 void frame_table_init () {
@@ -41,18 +42,28 @@ void test_frame_table(int max){
 // 	return f;
 // }
 
-/*struct frame * frame_delete () {
-
+bool return_frame (uint32_t addr) {
+	// Give the frame back!
+	int i;
+	for(i = 0; i < NUM_FRAMES; i++) {
+		if(frames[i].occupier == addr){
+			frames[i].occupier = NULL;
+			frames[i].t = get_initial_thread();
+			free_frames++;
+			return true;
+		}
+	}
+	return false;
 }
 
-struct frame * frame_evict () {
+/*struct frame * frame_evict () {
 
 }*/
 
 
 /* Returns a pointer to a free page */
 uint32_t * get_frame (uint32_t occu) {
-	uint32_t* begin_frame = NULL;
+	uint32_t* temp_frame = NULL;
 	int i;
 	if(free_frames == 0) {
 		printf ("Out of frames!\n");
@@ -63,16 +74,14 @@ uint32_t * get_frame (uint32_t occu) {
 			if (occu == NULL)
 				occu = frames[i].physical;
 			free_frames--;
-			begin_frame = frames[i].physical;
+			temp_frame = frames[i].physical;
 			frames[i].t = thread_current();
 			frames[i].occupier = occu;
 			break;
 		}
 	}
 
-	//test_frame_table(NUM_FRAMES);
-
-	return begin_frame;
+	return temp_frame;
 }
 
 

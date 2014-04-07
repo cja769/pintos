@@ -410,6 +410,7 @@ load (struct args *file_name, void (**eip) (void), void **esp)
                   zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
                 }
 
+              printf ("ORIGINAL WRITABLE!!! %s\n", writable ? "true" : "false");
               if (!load_supp_segment (file, file_page, (void *) mem_page,
                                  read_bytes, zero_bytes, writable)) {
 
@@ -435,10 +436,10 @@ load (struct args *file_name, void (**eip) (void), void **esp)
 
   success = true;
 
- done:
+  done:
   /* We arrive here whether the load is successful or not. */
   //file_close (file);
-  //file_allow_write(file);
+  // file_allow_write(file);
   return success;
 }
 
@@ -531,15 +532,18 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       /* Load this page. */
       if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
         {
-          palloc_free_page (kpage);
+          return_frame (kpage);
+          //palloc_free_page (kpage);
           return false; 
         }
       memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
+      printf("upage: %p, writable: %s\n", upage, writable == true ? "true" : "false");
       /* Add the page to the process's address space. */
       if (!install_page (upage, kpage, writable)) 
         {
-          palloc_free_page (kpage);
+          return_frame (kpage);
+          //palloc_free_page (kpage);
 
           return false; 
         }
@@ -560,8 +564,6 @@ load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
 
-  load_supp_page(file, ofs, (void *) upage, read_bytes, zero_bytes, writable);
-
   file_seek (file, ofs);
   while (read_bytes > 0 || zero_bytes > 0) 
     {
@@ -570,6 +572,8 @@ load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
          and zero the final PAGE_ZERO_BYTES bytes. */
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
+
+      load_supp_page(file, ofs, (void *) upage, page_read_bytes, page_zero_bytes, true);//writable); DONT FORGET YOU DID THIS
 
       /* Advance. */
       read_bytes -= page_read_bytes;

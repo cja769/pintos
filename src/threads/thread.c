@@ -277,6 +277,12 @@ thread_name (void)
   return thread_current ()->name;
 }
 
+struct thread *
+get_initial_thread(void)
+{
+  return initial_thread;
+}
+
 /* Returns the running thread.
    This is running_thread() plus a couple of sanity checks.
    See the big comment at the top of thread.h for details. */

@@ -158,10 +158,9 @@ page_fault (struct intr_frame *f)
   if (user && (!is_user_vaddr(fault_addr) || fault_addr == NULL))
     exit(-1);
 
-  bool loaded = false;
+  bool loaded = false; // true or false if we are loading this faulting address THIS time
 
-
-  test_frame_table(383);
+  // test_frame_table(10);
 
   struct list_elem *e;
   for (e = list_begin (&thread_current()->supp_page_table); e != list_end(&thread_current()->supp_page_table) && !loaded; e = list_next(e))
@@ -170,17 +169,18 @@ page_fault (struct intr_frame *f)
         printf("fault_addr: %08X, p->ofs: %08X, p->read_bytes: %08X, p->upage: %08X, p->zero_bytes: %08X\n", 
           fault_addr, p->ofs, p->read_bytes, p->upage, p->zero_bytes);
         printf("fault pt_no: %d, upage pt_no: %d\n", pt_no(fault_addr), pt_no(p->upage));
-        if (pt_no(fault_addr) == pt_no(p->upage)) {
+        if (pt_no(fault_addr) == pt_no(p->upage) && p->present == false) {
           loaded = load_segment(p->file, p->ofs, p->upage, p->read_bytes, p->zero_bytes, p->writable);
+          p->present = true;
         }
     }
 
-    test_frame_table(383);
-
+    test_frame_table(10);
 
   if (loaded)
     printf("loaded\n");
   else {
+    // printf("lookup_page: %p\n", pagedir_get_page(thread_current()->pagedir, fault_addr));
       /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
