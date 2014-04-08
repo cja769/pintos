@@ -16,7 +16,6 @@ void supp_page_table_init () {
    page faults later? */
 bool load_supp_page(struct file *file, off_t ofs, uint8_t *upage,
               uint32_t read_bytes, uint32_t zero_bytes, bool writable) {
-	printf("Herp\n");
 	struct supp_page *p = malloc (sizeof (struct supp_page));
 	p->file = file;
 	p->ofs = ofs;
@@ -36,6 +35,5 @@ void test_supp_page_table() {
       for (e = list_begin (&thread_current()->supp_page_table); e != list_end(&thread_current()->supp_page_table); e = list_next(e))
         {
             struct supp_page *p = list_entry (e, struct supp_page, suppelem);
-          	printf ("Supp page!\n");
         }
 }

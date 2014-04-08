@@ -155,29 +155,41 @@ page_fault (struct intr_frame *f)
 
   /* Samantha drove here */
   /* If a user tries to load and dereference a null pointer, exit */
-  if (user && (!is_user_vaddr(fault_addr) || fault_addr == NULL))
-    exit(-1);
+  if (user && (!is_user_vaddr(fault_addr) || fault_addr == NULL)) {
+    printf("user: %s, fault_addr: %p, f->eip: %p\n", user ? "true" : "false", fault_addr, f->eip);
+    //exit(-1);
+  }
 
-  bool loaded = false; // true or false if we are loading this faulting address THIS time
+  bool dont_kill = false; // true or false if we are loading this faulting address THIS time, formerly called loaded
 
-  // test_frame_table(10);
+  printf("\n\n\nBEFORE LOAD_SEGMENT: \n");
+  test_frame_table(10);
 
+  printf("fault address: %p, f->eip: %p\n", fault_addr, f->eip);
+  //printf("fault address: %p, *fault_address: %d\n", fault_addr, *(int *)fault_addr);
+  
   struct list_elem *e;
-  for (e = list_begin (&thread_current()->supp_page_table); e != list_end(&thread_current()->supp_page_table) && !loaded; e = list_next(e))
+  for (e = list_begin (&thread_current()->supp_page_table); e != list_end(&thread_current()->supp_page_table) && !dont_kill; e = list_next(e))
     {
         struct supp_page *p = list_entry (e, struct supp_page, suppelem);
-        printf("fault_addr: %08X, p->ofs: %08X, p->read_bytes: %08X, p->upage: %08X, p->zero_bytes: %08X\n", 
-          fault_addr, p->ofs, p->read_bytes, p->upage, p->zero_bytes);
-        printf("fault pt_no: %d, upage pt_no: %d\n", pt_no(fault_addr), pt_no(p->upage));
         if (pt_no(fault_addr) == pt_no(p->upage) && p->present == false) {
-          loaded = load_segment(p->file, p->ofs, p->upage, p->read_bytes, p->zero_bytes, p->writable);
+          // printf("fault_addr: %08X, p->ofs: %08X, p->read_bytes: %08X, p->upage: %08X, p->zero_bytes: %08X\n", 
+            // fault_addr, p->ofs, p->read_bytes, p->upage, p->zero_bytes);
+          // printf("fault pt_no: %d, upage pt_no: %d\n", pt_no(fault_addr), pt_no(p->upage));
+          dont_kill = load_segment(p->file, p->ofs, p->upage, p->read_bytes, p->zero_bytes, p->writable);
+          printf("load_segment returned %s\n", dont_kill ? "true" : "false");
           p->present = true;
+        }
+        else if (pt_no(fault_addr) == pt_no(p->upage) && p->present == true) {
+          dont_kill = true;
+          printf("fault address: %p, *fault_address: %d\n", fault_addr, *(int *)fault_addr);
         }
     }
 
-    test_frame_table(10);
+  test_frame_table(10);
+  printf("AFTER LOAD_SEGMENT: \n\n\n\n");
 
-  if (loaded)
+  if (dont_kill)
     printf("loaded\n");
   else {
     // printf("lookup_page: %p\n", pagedir_get_page(thread_current()->pagedir, fault_addr));

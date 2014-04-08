@@ -409,11 +409,10 @@ load (struct args *file_name, void (**eip) (void), void **esp)
                   read_bytes = 0;
                   zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
                 }
-
-              printf ("ORIGINAL WRITABLE!!! %s\n", writable ? "true" : "false");
+              // printf("mem_page: %p\n", mem_page);
+              // printf ("ORIGINAL WRITABLE!!! %s\n", writable ? "true" : "false");
               if (!load_supp_segment (file, file_page, (void *) mem_page,
-                                 read_bytes, zero_bytes, writable)) {
-
+                                 read_bytes, zero_bytes, true)) {//writable)) { // writable is true if part of exe
                 goto done;
               }
             }
@@ -513,7 +512,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
-  printf("something\n");
+  // printf("something\n");
 
   file_seek (file, ofs);
   while (read_bytes > 0 || zero_bytes > 0) 
@@ -538,7 +537,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
         }
       memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
-      printf("upage: %p, writable: %s\n", upage, writable == true ? "true" : "false");
+      // printf("upage: %p, writable: %s\n", upage, writable == true ? "true" : "false");
       /* Add the page to the process's address space. */
       if (!install_page (upage, kpage, writable)) 
         {
@@ -573,6 +572,7 @@ load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
+      // printf("IN LOAD_SUPP_SEGMENT!!!! upage: %p\n", upage);
       load_supp_page(file, ofs, (void *) upage, page_read_bytes, page_zero_bytes, writable); 
 
       /* Advance. */
@@ -595,10 +595,10 @@ setup_stack (void **esp, struct args *file_name)
   int addr[file_name->argc]; /* to store the address of each argument we push on the stack */
   int addr_argv;
 
-  kpage = (uint8_t *) get_frame (NULL); // changed to our method and did a janky cast
+  kpage = (uint8_t *) get_frame (((uint8_t *) PHYS_BASE) - PGSIZE); // changed to our method and did a janky cast
   if (kpage != NULL) 
     {
-      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
+      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true); // writable is true if part of stack
       if (success)
       {
         *esp = PHYS_BASE;
@@ -606,28 +606,94 @@ setup_stack (void **esp, struct args *file_name)
         /* pushes command line onto the stack from right to left */
         for(i = file_name->argc-1; i >= 0; i--)
         {
+          if(myesp - (strlen(file_name->argv[i]) + 1) <= *esp - PGSIZE)
+          {
+            kpage = (uint8_t *) get_frame ((uint32_t *)*esp - PGSIZE);
+            success = install_page ((uint32_t *)*esp - PGSIZE, kpage, true);
+            if(success) {
+              *esp = (uint32_t *)*esp - PGSIZE;
+              myesp = (char*)*esp;
+            } 
+            else 
+              exit(-1); // no more pages for stack growth!
+          }
           myesp -= (strlen(file_name->argv[i]) + 1);
           addr[i] = (int)myesp; /* save the address of each argument on the stack */
           strlcpy(myesp, file_name->argv[i], strlen(file_name->argv[i]) + 1);
         }
 
         myesp = (char*)ROUND_DOWN((uintptr_t)myesp, 4); /* word-align */
+        if(myesp - 4 <= *esp - PGSIZE)
+          {
+            kpage = (uint8_t *) get_frame ((uint32_t *)*esp - PGSIZE);
+            success = install_page ((uint32_t *)*esp - PGSIZE, kpage, true);
+            if(success) {
+              *esp = (uint32_t *)*esp - PGSIZE;
+              myesp = (char*)*esp;
+            } 
+            else 
+              exit(-1); // no more pages for stack growth!
+          }
         myesp-=4;
 
         /* pushes addresses of arguments onto the stack */
 
         for(i = file_name->argc-1; i >= 0; i--)
         {
+          if(myesp - 4 <= *esp - PGSIZE)
+          {
+            kpage = (uint8_t *) get_frame ((uint32_t *)*esp - PGSIZE);
+            success = install_page ((uint32_t *)*esp - PGSIZE, kpage, true);
+            if(success) {
+              *esp = (uint32_t *)*esp - PGSIZE;
+              myesp = (char*)*esp;
+            } 
+            else 
+              exit(-1); // no more pages for stack growth!
+          }
           myesp -= 4;
           memcpy(myesp, &addr[i], sizeof(int));
           if(i == 0)
             memcpy(&addr_argv, &myesp, sizeof(int));
         }
         //hex_dump(myesp, myesp, PHYS_BASE - (int)myesp, 1);
+        if(myesp - 4 <= *esp - PGSIZE)
+          {
+            kpage = (uint8_t *) get_frame ((uint32_t *)*esp - PGSIZE);
+            success = install_page ((uint32_t *)*esp - PGSIZE, kpage, true);
+            if(success) {
+              *esp = (uint32_t *)*esp - PGSIZE;
+              myesp = (char*)*esp;
+            } 
+            else 
+              exit(-1); // no more pages for stack growth!
+          }
         myesp -= 4;
         memcpy(myesp, &addr_argv, sizeof(int *)); /* pushes argv onto the stack */
+        if(myesp - 4 <= *esp - PGSIZE)
+          {
+            kpage = (uint8_t *) get_frame ((uint32_t *)*esp - PGSIZE);
+            success = install_page ((uint32_t *)*esp - PGSIZE, kpage, true);
+            if(success) {
+              *esp = (uint32_t *)*esp - PGSIZE;
+              myesp = (char*)*esp;
+            } 
+            else 
+              exit(-1); // no more pages for stack growth!
+          }
         myesp -= 4;
         memcpy(myesp, &(file_name->argc), sizeof(int)); /* pushes argc onto the stack */
+        if(myesp - 4 <= *esp - PGSIZE)
+          {
+            kpage = (uint8_t *) get_frame ((uint32_t *)*esp - PGSIZE);
+            success = install_page ((uint32_t *)*esp - PGSIZE, kpage, true);
+            if(success) {
+              *esp = (uint32_t *)*esp - PGSIZE;
+              myesp = (char*)*esp;
+            } 
+            else 
+              exit(-1); // no more pages for stack growth!
+          }
         myesp -= 4;
         i = 0;
         memcpy(myesp, &i, sizeof(char *)); /* fake return address */

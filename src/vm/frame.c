@@ -32,7 +32,7 @@ void frame_table_init () {
 void test_frame_table(int max){
 	int i;
 	for(i = 0; i < max; i++){
-		printf("frames[%d].occupier = %p,	frames[%d].physical = %p,    frames[%d].t->name = %s\n",i,frames[i].occupier,
+		printf("frames[%d].occupier = %p,	 frames[%d].physical = %p,    frames[%d].t->name = %s\n",i,frames[i].occupier,
 			i, frames[i].physical, i,frames[i].t->name);
 	}
 }
