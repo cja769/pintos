@@ -100,7 +100,7 @@ struct thread
     int file_index;                     /* Index of last open file */
     int wrap_flag;
 
-	/* Dustin drove here */
+  /* Dustin drove here */
     /* Create a list of children as copies to store their status and exit status.
        For each call to wait (pid), loop through children and reap any child whose status
        is dying... */
@@ -151,10 +151,10 @@ tid_t thread_create (const char *name, int priority, thread_func *, void *);
 void thread_block (void);
 void thread_unblock (struct thread *);
 
-struct thread * get_initial_thread(void);
 struct thread *thread_current (void);
 tid_t thread_tid (void);
 const char *thread_name (void);
+struct thread *get_initial_thread(void);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);

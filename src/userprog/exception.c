@@ -6,8 +6,9 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/syscall.h"
-#include "vm/page.h"
 #include "userprog/process.h"
+#include "vm/frame.h"
+#include "vm/page.h"
 #include "threads/pte.h"
 
 /* Number of page faults processed. */
@@ -155,15 +156,14 @@ page_fault (struct intr_frame *f)
 
   /* Samantha drove here */
   /* If a user tries to load and dereference a null pointer, exit */
-  if (user && (!is_user_vaddr(fault_addr) || fault_addr == NULL)) {
-    printf("user: %s, fault_addr: %p, f->eip: %p\n", user ? "true" : "false", fault_addr, f->eip);
-    //exit(-1);
-  }
+  if (user && (!is_user_vaddr(fault_addr) || fault_addr == NULL))
+    exit(-1);
 
   bool dont_kill = false; // true or false if we are loading this faulting address THIS time, formerly called loaded
 
-  printf("\n\n\nBEFORE LOAD_SEGMENT: \n");
+  printf("\n\n\nBegin page_fault: \n");
   test_frame_table(10);
+  //test_supp_page_table();
 
   printf("fault address: %p, f->eip: %p\n", fault_addr, f->eip);
   //printf("fault address: %p, *fault_address: %d\n", fault_addr, *(int *)fault_addr);
@@ -187,7 +187,8 @@ page_fault (struct intr_frame *f)
     }
 
   test_frame_table(10);
-  printf("AFTER LOAD_SEGMENT: \n\n\n\n");
+  //test_supp_page_table();
+  printf("End page_fault: \n\n\n\n");
 
   if (dont_kill)
     printf("loaded\n");

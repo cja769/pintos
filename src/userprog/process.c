@@ -17,13 +17,11 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
-#include "vm/frame.h"
 #include "vm/page.h"
+#include "vm/frame.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (struct args *file_name, void (**eip) (void), void **esp);
-static bool load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
-              uint32_t read_bytes, uint32_t zero_bytes, bool writable);
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -32,6 +30,9 @@ static bool load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
 tid_t
 process_execute (const char *file_name) 
 {
+  // Dustin and Jason drove this method
+  /* A struct to store the command line and number of
+     arguments for each new process */
   struct args *arguments = palloc_get_page(0);
   struct thread *t = thread_current();
   struct list_elem *e;
@@ -39,7 +40,7 @@ process_execute (const char *file_name)
   char *fn_copy;
   tid_t tid;
 
-  char *saveptr;// = palloc_get_page(0);              /* Used for strtok_r */
+  char *saveptr;// /* Used for strtok_r */
   arguments->argc = 0;
 
   /* Make a copy of FILE_NAME.
@@ -48,7 +49,7 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-  char *temp = palloc_get_page(0);
+  char *temp = palloc_get_page(0); 
   temp = strtok_r(fn_copy, " ", &saveptr);
   arguments->argv = palloc_get_page(0);
   arguments->argv[arguments->argc] = palloc_get_page(0);
@@ -57,19 +58,19 @@ process_execute (const char *file_name)
   strlcpy (arguments->argv[arguments->argc], temp, PGSIZE);
   arguments->argc++;
   arguments->argv[arguments->argc] = palloc_get_page(0);
-  while((temp = strtok_r(NULL, " ", &saveptr)) != NULL){
-    // palloc_free_page(temp);
-    // temp = palloc_get_page(0);
+  while((temp = strtok_r(NULL, " ", &saveptr)) != NULL){ /* Parse the command line and store them in args */
     arguments->argv[arguments->argc] = palloc_get_page(0);
     if (arguments->argv[arguments->argc] == NULL)
       return TID_ERROR;
     strlcpy (arguments->argv[arguments->argc], temp, PGSIZE);
-    arguments->argc++;
+    arguments->argc++; // Increment the number of args
   }  
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, arguments);
-  sema_down(&thread_current()->exec_sema);
+  /* The parent thread running this method will wait for exec to finish
+   If the child process failed to load, this method returns -1 */
+  sema_down(&thread_current()->exec_sema); 
   for (e = list_begin (&t->children); e != list_end (&t->children);
        e = list_next (e))
     {
@@ -89,20 +90,16 @@ process_execute (const char *file_name)
 static void
 start_process (void *file_name_)
 {
-  // printf("inside start_process\n");
+  // Dustin and Jason drove this method
   //used to loop through children list
   struct thread *t = thread_current();
   struct list_elem *e;
 
+  // Create the struct args and store the command line 
   struct args *arguments = (struct args*)file_name_;
   char *file_name = arguments->argv[0];
   struct intr_frame if_;
   bool success;
-
-  // int j;
-  // for (j = 0; j < 4; j++) {
-  //   printf("%s\n", arguments->argv[j]);
-  // }
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -111,7 +108,8 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (arguments, &if_.eip, &if_.esp);
 
-  /* If load failed, quit. */
+  /* If load failed, quit and set the parents copy of this threads exit status to 0, 
+     otherwise allow the parent to continue after exec by calling sema_up */
   palloc_free_page (file_name);
   if (!success) 
   {
@@ -125,7 +123,6 @@ start_process (void *file_name_)
     sema_up(&thread_current()->parent->exec_sema);
     thread_exit ();
   }
-
   sema_up(&thread_current()->parent->exec_sema);
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -149,48 +146,35 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid) 
 {
-  //Find thread with given tid (part of thread struct)
-  //While loop (?) until thread status is DYING or something
-  //Get exit status from f->eax (somehow)
-  //Exit status will be weird if terminated by kernal
-  //Somehow check if process_wait has been called for this thread
-  //  (Maybe add boolean to thread struct?)
-  //
+  // Jason drove this method
   struct thread *t = thread_current ();
-  //printf("param tid: %d, thread tid: %d\n", child_tid, t->tid);
 
   struct list_elem *e;
   int exit_status;
 
+  /* Iterate through the parents list of children and find a match with child_tid.
+     If a child is found and has already terminated, remove the thread from this threads list of
+   children and return with its exit status. Otherwise, call sema_down to wait for the
+   child process to terminate or call sema_up. */
   for (e = list_begin (&t->children); e != list_end (&t->children);
        e = list_next (e))
     {
       struct thread *copy = list_entry (e, struct thread, elem);
       if (copy->tid == child_tid)
       {
-        // if (copy->status == THREAD_DYING)
-        // {
-        //   //printf ("Returning -1 in process wait: 1\n");
-        //   list_remove (e);
-        //   return -1;
-        // }
-        //REMEMBER TO TAKE CHILD COPY OFF OF LIST
         while (copy->status != THREAD_DYING)
         {
-          //printf("Yielding\n");
           sema_down(&copy->mutex);
-          //thread_yield();
         }
 
         ASSERT (copy->status == THREAD_DYING); 
-        //printf ("Copying exit status... %d\n", copy->exit_status);
         exit_status = copy->exit_status;
-        //printf ("Returning exit_status in process wait: 2\n");
         list_remove (e);
         return exit_status;
       } // break
     }
-    //printf ("Returning -1 in process wait: 3\n");
+  
+  // If control reaches here, the thread child_tid does not exist
   return -1;
 }
 
@@ -299,9 +283,8 @@ struct Elf32_Phdr
 
 static bool setup_stack (void **esp, struct args *file_name);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
-bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
-                          uint32_t read_bytes, uint32_t zero_bytes,
-                          bool writable);
+static bool load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
+              uint32_t read_bytes, uint32_t zero_bytes, bool writable);
 
 /* Loads an ELF executable from FILE_NAME into the current thread.
    Stores the executable's entry point into *EIP
@@ -310,7 +293,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 bool
 load (struct args *file_name, void (**eip) (void), void **esp) 
 {
-  //printf("inside load\n");
+  // Dustin drove this method
   char *file_ = *file_name->argv;
 
   struct thread *t = thread_current ();
@@ -320,32 +303,23 @@ load (struct args *file_name, void (**eip) (void), void **esp)
   bool success = false;
   int i;
 
-  // int j;
-  // for (j = 0; j < 4; j++) {
-  //   printf("%s\n", file_name->argv[j]);
-  // }
-
-  /* Initialize the supplemental page table */
-  supp_page_table_init ();
-
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL) 
     goto done;
   process_activate ();
 
-  //printf("File name: %s\n", file_);
+  /* Initialize the supplemental page table */
+  supp_page_table_init ();
 
   /* Open executable file. */
   file = filesys_open (file_);
-  file_deny_write (file); /* Sets deny write to files inode */
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_);
       goto done; 
     }
-    else
-      //printf("Not null: %s\n", file_);
+  file_deny_write (file); /* Sets deny write to files inode */
 
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
@@ -409,17 +383,10 @@ load (struct args *file_name, void (**eip) (void), void **esp)
                   read_bytes = 0;
                   zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
                 }
-              // printf("mem_page: %p\n", mem_page);
-              // printf ("ORIGINAL WRITABLE!!! %s\n", writable ? "true" : "false");
               if (!load_supp_segment (file, file_page, (void *) mem_page,
-                                 read_bytes, zero_bytes, true)) {//writable)) { // writable is true if part of exe
-                goto done;
-              }
-            }
-                /* Load the information about the segment into the supp_page_table */
-                /*if (!load_supp_page (file, file_page, (void *) mem_page, 
                                  read_bytes, zero_bytes, writable))
-                goto done;*/
+                goto done;
+            }
           else
             goto done;
           break;
@@ -435,10 +402,10 @@ load (struct args *file_name, void (**eip) (void), void **esp)
 
   success = true;
 
-  done:
+ done:
   /* We arrive here whether the load is successful or not. */
-  //file_close (file);
-  // file_allow_write(file);
+
+  thread_current ()->exe = file;
   return success;
 }
 
@@ -512,7 +479,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
-  // printf("something\n");
 
   file_seek (file, ofs);
   while (read_bytes > 0 || zero_bytes > 0) 
@@ -523,27 +489,23 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
-      /* Get a frame of memory. */
-      uint8_t *kpage = (uint8_t *) get_frame (upage);  // changed to our method and did a janky cast
+      /* Get a page of memory. */
+      uint8_t *kpage = get_frame(upage);
       if (kpage == NULL)
         return false;
 
       /* Load this page. */
       if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
         {
-          return_frame (kpage);
-          //palloc_free_page (kpage);
+          return_frame (upage);
           return false; 
         }
       memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
-      // printf("upage: %p, writable: %s\n", upage, writable == true ? "true" : "false");
       /* Add the page to the process's address space. */
       if (!install_page (upage, kpage, writable)) 
         {
-          return_frame (kpage);
-          //palloc_free_page (kpage);
-
+          return_frame (upage);
           return false; 
         }
 
@@ -571,7 +533,6 @@ load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
          and zero the final PAGE_ZERO_BYTES bytes. */
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
-
       // printf("IN LOAD_SUPP_SEGMENT!!!! upage: %p\n", upage);
       load_supp_page(file, ofs, (void *) upage, page_read_bytes, page_zero_bytes, writable); 
 
@@ -588,119 +549,54 @@ load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp, struct args *file_name) 
 {
+  /* Dustin and Jason drove this method */
   uint8_t *kpage;
   bool success = false;
   int i;
   char *myesp;
-  int addr[file_name->argc]; /* to store the address of each argument we push on the stack */
-  int addr_argv;
+  int addr[file_name->argc]; /* To store the address of each argument we push on the stack */
+  int addr_argv; /* To store the address of the first pointer on the stack */
 
-  kpage = (uint8_t *) get_frame (((uint8_t *) PHYS_BASE) - PGSIZE); // changed to our method and did a janky cast
+  kpage = get_frame(((uint8_t *) PHYS_BASE) - PGSIZE);
   if (kpage != NULL) 
     {
-      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true); // writable is true if part of stack
+      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
       {
         *esp = PHYS_BASE;
-        myesp = (char*)*esp;
-        /* pushes command line onto the stack from right to left */
+        myesp = (char*)*esp; // Modify a copy of myesp for easier arithmetic, and set esp at the end
+        /* Pushes command line onto the stack from right to left */
         for(i = file_name->argc-1; i >= 0; i--)
         {
-          if(myesp - (strlen(file_name->argv[i]) + 1) <= *esp - PGSIZE)
-          {
-            kpage = (uint8_t *) get_frame ((uint32_t *)*esp - PGSIZE);
-            success = install_page ((uint32_t *)*esp - PGSIZE, kpage, true);
-            if(success) {
-              *esp = (uint32_t *)*esp - PGSIZE;
-              myesp = (char*)*esp;
-            } 
-            else 
-              exit(-1); // no more pages for stack growth!
-          }
           myesp -= (strlen(file_name->argv[i]) + 1);
-          addr[i] = (int)myesp; /* save the address of each argument on the stack */
+          addr[i] = (int)myesp; /* Save the address of each argument on the stack */
           strlcpy(myesp, file_name->argv[i], strlen(file_name->argv[i]) + 1);
         }
 
+    // Jason drove here
         myesp = (char*)ROUND_DOWN((uintptr_t)myesp, 4); /* word-align */
-        if(myesp - 4 <= *esp - PGSIZE)
-          {
-            kpage = (uint8_t *) get_frame ((uint32_t *)*esp - PGSIZE);
-            success = install_page ((uint32_t *)*esp - PGSIZE, kpage, true);
-            if(success) {
-              *esp = (uint32_t *)*esp - PGSIZE;
-              myesp = (char*)*esp;
-            } 
-            else 
-              exit(-1); // no more pages for stack growth!
-          }
-        myesp-=4;
+        myesp -= 4;
 
-        /* pushes addresses of arguments onto the stack */
-
+    // Dustin drove here
+        /* Pushes addresses of arguments onto the stack */
         for(i = file_name->argc-1; i >= 0; i--)
         {
-          if(myesp - 4 <= *esp - PGSIZE)
-          {
-            kpage = (uint8_t *) get_frame ((uint32_t *)*esp - PGSIZE);
-            success = install_page ((uint32_t *)*esp - PGSIZE, kpage, true);
-            if(success) {
-              *esp = (uint32_t *)*esp - PGSIZE;
-              myesp = (char*)*esp;
-            } 
-            else 
-              exit(-1); // no more pages for stack growth!
-          }
           myesp -= 4;
           memcpy(myesp, &addr[i], sizeof(int));
           if(i == 0)
             memcpy(&addr_argv, &myesp, sizeof(int));
         }
-        //hex_dump(myesp, myesp, PHYS_BASE - (int)myesp, 1);
-        if(myesp - 4 <= *esp - PGSIZE)
-          {
-            kpage = (uint8_t *) get_frame ((uint32_t *)*esp - PGSIZE);
-            success = install_page ((uint32_t *)*esp - PGSIZE, kpage, true);
-            if(success) {
-              *esp = (uint32_t *)*esp - PGSIZE;
-              myesp = (char*)*esp;
-            } 
-            else 
-              exit(-1); // no more pages for stack growth!
-          }
         myesp -= 4;
-        memcpy(myesp, &addr_argv, sizeof(int *)); /* pushes argv onto the stack */
-        if(myesp - 4 <= *esp - PGSIZE)
-          {
-            kpage = (uint8_t *) get_frame ((uint32_t *)*esp - PGSIZE);
-            success = install_page ((uint32_t *)*esp - PGSIZE, kpage, true);
-            if(success) {
-              *esp = (uint32_t *)*esp - PGSIZE;
-              myesp = (char*)*esp;
-            } 
-            else 
-              exit(-1); // no more pages for stack growth!
-          }
+        memcpy(myesp, &addr_argv, sizeof(int *)); /* Pushes the address of argv onto the stack */
         myesp -= 4;
-        memcpy(myesp, &(file_name->argc), sizeof(int)); /* pushes argc onto the stack */
-        if(myesp - 4 <= *esp - PGSIZE)
-          {
-            kpage = (uint8_t *) get_frame ((uint32_t *)*esp - PGSIZE);
-            success = install_page ((uint32_t *)*esp - PGSIZE, kpage, true);
-            if(success) {
-              *esp = (uint32_t *)*esp - PGSIZE;
-              myesp = (char*)*esp;
-            } 
-            else 
-              exit(-1); // no more pages for stack growth!
-          }
+        memcpy(myesp, &(file_name->argc), sizeof(int)); /* Pushes argc onto the stack */
         myesp -= 4;
         i = 0;
-        memcpy(myesp, &i, sizeof(char *)); /* fake return address */
+        memcpy(myesp, &i, sizeof(char *)); /* Fake return address */
         *esp = myesp;
       }
       else
-        palloc_free_page (kpage);
+        return_frame (((uint8_t *) PHYS_BASE) - PGSIZE);
     }
   return success;
 }

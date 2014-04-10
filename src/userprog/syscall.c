@@ -169,7 +169,7 @@ int read (int fd, void *buffer, unsigned size) {
   // Calvin and Samantha took turns driving this system_call
   struct thread *t = thread_current();
   int result;
-  // Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
+  //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
   if (fd >= 130 || fd < 0 || fd == 1)
   {
       exit(-1);
@@ -178,10 +178,10 @@ int read (int fd, void *buffer, unsigned size) {
   if(fd >= 2){
     fd -= 2;
     if (t->file_list[fd] == -1)
-	{
+  {
       exit(-1);
-	}
-		/* Acquire a lock to read a file in file_sys */
+  }
+    /* Acquire a lock to read a file in file_sys */
     lock_acquire(t->io_lock);
     result = file_read (t->file_list[fd], buffer, size);
     lock_release (t->io_lock);
@@ -200,7 +200,7 @@ int read (int fd, void *buffer, unsigned size) {
     lock_release (t->io_lock);
     return result;
   }
-		/* Acquire a lock to read a file in file_sys */
+    /* Acquire a lock to read a file in file_sys */
     lock_acquire(t->io_lock);
     result = file_read (t->file_list[fd], buffer, size);
     lock_release (t->io_lock);
@@ -221,10 +221,10 @@ int write (int fd, const void *buffer, unsigned size)
   if (fd >= 2) {
     fd -= 2;
     if (t->file_list[fd] == -1)
-	{
+  {
       exit(-1);
-	}
-		/* Acquire a lock to write to file_sys */
+  }
+    /* Acquire a lock to write to file_sys */
     lock_acquire(t->io_lock);
     result = file_write(t->file_list[fd], buffer, size);
     lock_release (t->io_lock);
@@ -235,7 +235,7 @@ int write (int fd, const void *buffer, unsigned size)
   if (fd == 1) {
     putbuf((char *)buffer, size);
   }
-  return size;
+  return 0;
 }
 
 void seek (int fd, unsigned position) {
@@ -393,8 +393,8 @@ syscall_handler (struct intr_frame *f)
       
     default: 
       printf ("Syscall not yet defined!\n"); // 
-	  f->eax = -1; // Update register with return value
-	  exit (-1); // If a system call is not defined, safely exit the thread
+    f->eax = -1; // Update register with return value
+    exit (-1); // If a system call is not defined, safely exit the thread
       break;
   }
 }

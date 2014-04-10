@@ -1,5 +1,4 @@
 #include "threads/init.h"
-#include "vm/frame.h"
 #include <console.h>
 #include <debug.h>
 #include <inttypes.h>
@@ -23,6 +22,7 @@
 #include "threads/palloc.h"
 #include "threads/pte.h"
 #include "threads/thread.h"
+#include "vm/frame.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "userprog/exception.h"
@@ -129,8 +129,9 @@ main (void)
 #endif
 
   //*******************************************//
-  frame_table_init();      // initializes our frame table (good of place as any)
+  frame_table_init();      // initializes our frame table
   //*******************************************//
+
   printf ("Boot complete.\n");
   
   /* Run actions specified on kernel command line. */
@@ -164,6 +165,7 @@ paging_init (void)
   uint32_t *pd, *pt;
   size_t page;
   extern char _start, _end_kernel_text;
+
   pd = init_page_dir = palloc_get_page (PAL_ASSERT | PAL_ZERO);
   pt = NULL;
   for (page = 0; page < init_ram_pages; page++)

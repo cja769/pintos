@@ -15,7 +15,7 @@ void frame_table_init () {
 	//Initially set all members of frame table to null char
 	int i = 0;
 	uint32_t* begin_frame;
-	while((begin_frame = (uint32_t*) palloc_get_page(PAL_USER | PAL_ZERO)) != NULL) {
+	while((begin_frame = (uint32_t*) palloc_get_page(PAL_USER)) != NULL) {
 		frames[i].physical = begin_frame;
 		frames[i].occupier = NULL;
 		frames[i].t = thread_current();
@@ -31,9 +31,13 @@ void frame_table_init () {
 
 void test_frame_table(int max){
 	int i;
+	// int j;
 	for(i = 0; i < max; i++){
 		printf("frames[%d].occupier = %p,	 frames[%d].physical = %p,    frames[%d].t->name = %s\n",i,frames[i].occupier,
 			i, frames[i].physical, i,frames[i].t->name);
+		// for(j = 0; j < 128; j++)
+		// 	printf("Address %p = %p\n",(frames[i].physical)+(4*j), *((frames[i].physical)+(4*j)));
+		// printf("\n");
 	}
 }
 // struct frame * frame_create () {

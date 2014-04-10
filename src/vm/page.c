@@ -23,17 +23,24 @@ bool load_supp_page(struct file *file, off_t ofs, uint8_t *upage,
 	p->read_bytes = read_bytes;
 	p->zero_bytes = zero_bytes;
 	p->writable = writable;
-  p->present = false;
+    p->present = false;
 	list_push_back(&thread_current ()->supp_page_table, &p->suppelem);
-	test_supp_page_table();
+	// test_supp_page_table();
 	return true;
 }
 
 void test_supp_page_table() {
 	struct list_elem *e;
 
+	int i;
       for (e = list_begin (&thread_current()->supp_page_table); e != list_end(&thread_current()->supp_page_table); e = list_next(e))
         {
             struct supp_page *p = list_entry (e, struct supp_page, suppelem);
+            for(i = 0; i < 1024; i++){
+            	printf("address %p = %p\n",(p->upage)+(4*i), *((p->upage)+(4*i)));
+            }
         }
 }
+
+
+

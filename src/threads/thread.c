@@ -13,6 +13,7 @@
 #include "threads/vaddr.h"
 #ifdef USERPROG
 #include "userprog/process.h"
+#include "vm/frame.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -104,6 +105,10 @@ thread_init (void)
   initial_thread->status = THREAD_RUNNING;
   initial_thread->io_lock = &io_lock; // Initialize the initial_thread's io_lock for rox
   initial_thread->tid = allocate_tid ();
+
+  //*******************************************//
+  // frame_table_init();      // initializes our frame table
+  //*******************************************//
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
