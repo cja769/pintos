@@ -161,11 +161,11 @@ page_fault (struct intr_frame *f)
 
   bool dont_kill = false; // true or false if we are loading this faulting address THIS time, formerly called loaded
 
-  printf("\n\n\nBegin page_fault: \n");
-  test_frame_table(10);
+//  printf("\n\n\nBegin page_fault: \n");
+//  test_frame_table(10);
   //test_supp_page_table();
 
-  printf("fault address: %p, f->eip: %p\n", fault_addr, f->eip);
+//  printf("fault address: %p, f->eip: %p\n", fault_addr, f->eip);
   //printf("fault address: %p, *fault_address: %d\n", fault_addr, *(int *)fault_addr);
   
   struct list_elem *e;
@@ -177,22 +177,21 @@ page_fault (struct intr_frame *f)
             // fault_addr, p->ofs, p->read_bytes, p->upage, p->zero_bytes);
           // printf("fault pt_no: %d, upage pt_no: %d\n", pt_no(fault_addr), pt_no(p->upage));
           dont_kill = load_segment(p->file, p->ofs, p->upage, p->read_bytes, p->zero_bytes, p->writable);
-          printf("load_segment returned %s\n", dont_kill ? "true" : "false");
+ //         printf("load_segment returned %s\n", dont_kill ? "true" : "false");
           p->present = true;
         }
         else if (pt_no(fault_addr) == pt_no(p->upage) && p->present == true) {
           dont_kill = true;
-          printf("fault address: %p, *fault_address: %d\n", fault_addr, *(int *)fault_addr);
+ //         printf("fault address: %p, *fault_address: %d\n", fault_addr, *(int *)fault_addr);
         }
     }
 
-  test_frame_table(10);
+ // test_frame_table(10);
   //test_supp_page_table();
-  printf("End page_fault: \n\n\n\n");
+ // printf("End page_fault: \n\n\n\n");
 
-  if (dont_kill)
-    printf("loaded\n");
-  else {
+  if (!dont_kill){
+   // printf("loaded\n"); {
     // printf("lookup_page: %p\n", pagedir_get_page(thread_current()->pagedir, fault_addr));
       /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to

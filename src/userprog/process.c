@@ -524,7 +524,7 @@ load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
-
+  off_t new_ofs = ofs;
   file_seek (file, ofs);
   while (read_bytes > 0 || zero_bytes > 0) 
     {
@@ -534,8 +534,8 @@ load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
       // printf("IN LOAD_SUPP_SEGMENT!!!! upage: %p\n", upage);
-      load_supp_page(file, ofs, (void *) upage, page_read_bytes, page_zero_bytes, writable); 
-
+      load_supp_page(file,new_ofs, (void *) upage, page_read_bytes, page_zero_bytes, writable); 
+      new_ofs += (page_read_bytes + page_zero_bytes);
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
