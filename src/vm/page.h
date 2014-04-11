@@ -22,16 +22,16 @@
 #include "threads/vaddr.h"
 
 struct supp_page {
-	struct file *file;
-	off_t ofs;
-	uint8_t *upage;
-	uint32_t read_bytes;
-	uint32_t zero_bytes;
-	bool writable;
-    bool present;
-    bool is_stack;
+  struct file *file;
+  off_t ofs;
+  uint8_t *upage;
+  uint32_t read_bytes;
+  uint32_t zero_bytes;
+  bool writable;
+  bool present;
+  bool is_stack;
 
-	struct list_elem suppelem;
+  struct list_elem suppelem;
 };
 
 void supp_page_table_init (void);

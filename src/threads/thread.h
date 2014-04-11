@@ -120,6 +120,10 @@ struct thread
     /* Lock for io synchronization */
     struct lock *io_lock;
 
+    /* Lock for vm synchronization */
+    struct lock *vm_lock;
+    bool holds_vm_lock;
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 

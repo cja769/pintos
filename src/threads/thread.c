@@ -41,6 +41,9 @@ static struct lock tid_lock;
 /* Lock used to read and write */
 static struct lock io_lock;
 
+/* Lock used to modify vm */
+static struct lock vm_lock;
+
 
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame 
@@ -96,6 +99,7 @@ thread_init (void)
 
   lock_init (&tid_lock);
   lock_init (&io_lock);
+  lock_init (&vm_lock);
   list_init (&ready_list);
   list_init (&all_list);
 
@@ -107,6 +111,8 @@ thread_init (void)
   list_init (&initial_thread->children); // Initialize the initial_thread's list of children
   initial_thread->status = THREAD_RUNNING;
   initial_thread->io_lock = &io_lock; // Initialize the initial_thread's io_lock for rox
+  initial_thread->vm_lock = &vm_lock; // Initialize the initial_thread's vm_lock
+  initial_thread->holds_vm_lock = false;
   initial_thread->tid = allocate_tid ();
   //initial_thread->replace_count = &count;
 
@@ -334,6 +340,8 @@ thread_exit (void)
      when it calls thread_schedule_tail(). */
   intr_disable ();
   list_remove (&thread_current()->allelem);
+  if(thread_current ()->holds_vm_lock)
+    lock_release (thread_current ()->vm_lock);
   thread_current ()->status = THREAD_DYING;
   schedule ();
   NOT_REACHED ();
@@ -509,6 +517,8 @@ init_thread (struct thread *t, const char *name, int priority)
   memset(t->file_list, -1, 128 * sizeof(int *));
   t->wrap_flag = 0;
   t->io_lock = &io_lock; // Pass a pointer to the main threads io_lock
+  t->vm_lock = &vm_lock; // Pass a pointer to the main threads vm_lock
+  t->holds_vm_lock = false;
 
   sema_init(&t->exec_sema, 0); /* Synchronization semaphore, trying to get syn-read/write to work */
 

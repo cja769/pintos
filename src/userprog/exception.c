@@ -202,7 +202,7 @@ page_fault (struct intr_frame *f)
       thread_current()->esp -= PGSIZE;
   }
   else if (!dont_kill){
-      printf("execption.c\n");
+      //printf("execption.c\n");
       exit(-1);
   }
 }

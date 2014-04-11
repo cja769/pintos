@@ -12,8 +12,7 @@ int free_frames;				// The max number of frames in the frame table
 
 /* Initialize this file */
 void frame_table_init () {
-
-	//Initially set all members of frame table to null char
+	// Initially set all members of frame table to null char
 	int i = 0;
 	uint32_t* begin_frame;
 	while((begin_frame = (uint32_t*) palloc_get_page(PAL_USER)) != NULL) {
@@ -66,6 +65,8 @@ bool frame_evict () {
 	//printf("in frame evict\n");
 	//int* count = t->replace_count;
 	//int cnt = *count;
+	lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
+	thread_current ()->holds_vm_lock = true;
 	struct thread *t;
 	int ass_count = 0;
 	uint8_t *upage;
@@ -82,17 +83,33 @@ bool frame_evict () {
 		// //else if ((p->is_stack))
 		// //	ass_count++;
 		if(p != NULL && !(p->is_stack)){
+			/* We are evicting a non-stack page from frames, and can 
+				 safely "throw it away" if its not dirty */
 			pagedir_clear_page (t->pagedir, upage);
 			p->present = false;
 			//ASSERT ( 0 == 1);
 			go = false;
 		}
-		replace_count++;
-		if(replace_count >= NUM_FRAMES)
-			replace_count = 0; 
+		else if(p != NULL && p->is_stack) {
+			/* We are evicting a stack page to the swap space, but must 
+			   update the supp_page to reflect the ofs into the swap partition
+			   so that it may be reloaded into memory in the future */
+			p->file = NULL;
+			p->ofs = NULL;
+			p->read_bytes = 0;
+			p->zero_bytes = 0;
+			p->present = false;
+		}
+		else {
+			replace_count++;
+			if(replace_count >= NUM_FRAMES)
+				replace_count = 0; 
+		}
 	}
 	//*count = cnt;
 	//printf("replace_count = %d\n",replace_count);
+	lock_release (thread_current ()->vm_lock); // Release the vm_lock
+	thread_current ()->holds_vm_lock = false;
 	return return_frame(upage);
 }
 
@@ -101,10 +118,12 @@ bool frame_evict () {
 uint32_t * get_frame (uint32_t *occu) {
 	uint32_t* temp_frame = NULL;
 	int i;
+	//lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
 	if(free_frames == 0) {
 		if(!frame_evict())
 			exit(-1);
 	}
+	lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
 	for(i = 0; i < NUM_FRAMES; i++) {
 		if(frames[i].occupier == NULL){
 			free_frames--;
@@ -115,6 +134,7 @@ uint32_t * get_frame (uint32_t *occu) {
 		}
 	}
 
+	lock_release (thread_current ()->vm_lock); // Release the vm_lock
 	return temp_frame;
 }
 
