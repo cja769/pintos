@@ -409,9 +409,6 @@ load (struct args *file_name, void (**eip) (void), void **esp)
   return success;
 }
 
-/* load() helpers. */
-
-static bool install_page (void *upage, void *kpage, bool writable);
 
 /* Checks whether PHDR describes a valid, loadable segment in
    FILE and returns true if so, false otherwise. */
@@ -479,9 +476,10 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
-
-  file_seek (file, ofs);
-  while (read_bytes > 0 || zero_bytes > 0) 
+  bool file_null = file == NULL;
+  if(!file_null)
+    file_seek (file, ofs);
+  while (read_bytes > 0 || zero_bytes > 0 && !file_null) 
     {
       /* Calculate how to fill this page.
          We will read PAGE_READ_BYTES bytes from FILE
@@ -505,6 +503,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       /* Add the page to the process's address space. */
       if (!install_page (upage, kpage, writable)) 
         {
+          ASSERT( 0 == 1);
           return_frame (upage);
           return false; 
         }
@@ -525,7 +524,9 @@ load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
   off_t new_ofs = ofs;
-  file_seek (file, ofs);
+  // printf("before seek\n");
+  // file_seek (file, ofs);
+  // printf("after seek\n");
   while (read_bytes > 0 || zero_bytes > 0) 
     {
       /* Calculate how to fill this page.
@@ -534,7 +535,7 @@ load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
       // printf("IN LOAD_SUPP_SEGMENT!!!! upage: %p\n", upage);
-      load_supp_page(file,new_ofs, (void *) upage, page_read_bytes, page_zero_bytes, writable); 
+      load_supp_page(file,new_ofs, (void *) upage, page_read_bytes, page_zero_bytes, writable, false); 
       new_ofs += (page_read_bytes + page_zero_bytes);
       /* Advance. */
       read_bytes -= page_read_bytes;
@@ -556,14 +557,18 @@ setup_stack (void **esp, struct args *file_name)
   char *myesp;
   int addr[file_name->argc]; /* To store the address of each argument we push on the stack */
   int addr_argv; /* To store the address of the first pointer on the stack */
-
-  kpage = get_frame(((uint8_t *) PHYS_BASE) - PGSIZE);
+  uint8_t *upage = ((uint8_t *) PHYS_BASE) - PGSIZE;
+  kpage = get_frame(upage);
   if (kpage != NULL) 
     {
-      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
+      success = install_page (upage, kpage, true);
       if (success)
       {
+        load_supp_page(NULL, 0, upage, 0, 0, true, true);
+        // test_supp_page_table();
         *esp = PHYS_BASE;
+        thread_current()->esp = (uint8_t *)PHYS_BASE - PGSIZE; /*For stack growth - need
+          bottom of stack page to create new page*/
         myesp = (char*)*esp; // Modify a copy of myesp for easier arithmetic, and set esp at the end
         /* Pushes command line onto the stack from right to left */
         for(i = file_name->argc-1; i >= 0; i--)
@@ -610,7 +615,7 @@ setup_stack (void **esp, struct args *file_name)
    with palloc_get_page().
    Returns true on success, false if UPAGE is already mapped or
    if memory allocation fails. */
-static bool
+bool
 install_page (void *upage, void *kpage, bool writable)
 {
   struct thread *t = thread_current ();

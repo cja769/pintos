@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "threads/palloc.h"
 #include "threads/thread.h"
+#include "vm/page.h"
 
 // static struct frame_table *ftb;						// Stores the one and only frame table
 int free_frames;				// The max number of frames in the frame table
@@ -46,8 +47,9 @@ void test_frame_table(int max){
 // 	return f;
 // }
 
-bool return_frame (uint32_t addr) {
+bool return_frame (uint32_t *addr) {
 	// Give the frame back!
+	// printf("in return_frame\n");
 	int i;
 	for(i = 0; i < NUM_FRAMES; i++) {
 		if(frames[i].occupier == addr){
@@ -60,23 +62,51 @@ bool return_frame (uint32_t addr) {
 	return false;
 }
 
-/*struct frame * frame_evict () {
+bool frame_evict () {
+	//printf("in frame evict\n");
+	//int* count = t->replace_count;
+	//int cnt = *count;
+	struct thread *t;
+	int ass_count = 0;
+	uint8_t *upage;
+	struct frame replace_frame;
+	struct supp_page * p;
+	bool go = true;
+	while(go){
+		replace_frame = frames[replace_count];
+		t = replace_frame.t;
+		upage = replace_frame.occupier;
+		p = search_supp_table(upage);
+		// //if((p->is_stack) && ass_count)
+		// 	ASSERT(!(p->is_stack))
+		// //else if ((p->is_stack))
+		// //	ass_count++;
+		if(p != NULL && !(p->is_stack)){
+			pagedir_clear_page (t->pagedir, upage);
+			p->present = false;
+			//ASSERT ( 0 == 1);
+			go = false;
+		}
+		replace_count++;
+		if(replace_count >= NUM_FRAMES)
+			replace_count = 0; 
+	}
+	//*count = cnt;
+	//printf("replace_count = %d\n",replace_count);
+	return return_frame(upage);
+}
 
-}*/
 
-
-/* Returns a pointer to a free page */
-uint32_t * get_frame (uint32_t occu) {
+/* Returns a pointer to a free frame */
+uint32_t * get_frame (uint32_t *occu) {
 	uint32_t* temp_frame = NULL;
 	int i;
 	if(free_frames == 0) {
-		printf ("Out of frames!\n");
-		exit(0);
+		if(!frame_evict())
+			exit(-1);
 	}
 	for(i = 0; i < NUM_FRAMES; i++) {
 		if(frames[i].occupier == NULL){
-			if (occu == NULL)
-				occu = frames[i].physical;
 			free_frames--;
 			temp_frame = frames[i].physical;
 			frames[i].t = thread_current();

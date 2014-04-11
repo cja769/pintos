@@ -41,6 +41,7 @@ static struct lock tid_lock;
 /* Lock used to read and write */
 static struct lock io_lock;
 
+
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame 
   {
@@ -99,12 +100,15 @@ thread_init (void)
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
+  //int count = 0;
+  replace_count = 0;
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
   list_init (&initial_thread->children); // Initialize the initial_thread's list of children
   initial_thread->status = THREAD_RUNNING;
   initial_thread->io_lock = &io_lock; // Initialize the initial_thread's io_lock for rox
   initial_thread->tid = allocate_tid ();
+  //initial_thread->replace_count = &count;
 
   //*******************************************//
   // frame_table_init();      // initializes our frame table
@@ -500,6 +504,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+  //t->replace_count = get_initial_thread()->replace_count;
   t->file_index = 0; // Create and set a list of file pointers for file descriptors
   memset(t->file_list, -1, 128 * sizeof(int *));
   t->wrap_flag = 0;

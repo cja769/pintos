@@ -165,45 +165,45 @@ page_fault (struct intr_frame *f)
 //  test_frame_table(10);
   //test_supp_page_table();
 
-//  printf("fault address: %p, f->eip: %p\n", fault_addr, f->eip);
-  //printf("fault address: %p, *fault_address: %d\n", fault_addr, *(int *)fault_addr);
-  
+  //printf("fault address: %p, f->eip: %p\n", fault_addr, f->eip);
+  //printf("fault address: %p\n", fault_addr);
+
+
   struct list_elem *e;
   for (e = list_begin (&thread_current()->supp_page_table); e != list_end(&thread_current()->supp_page_table) && !dont_kill; e = list_next(e))
     {
         struct supp_page *p = list_entry (e, struct supp_page, suppelem);
         if (pt_no(fault_addr) == pt_no(p->upage) && p->present == false) {
           // printf("fault_addr: %08X, p->ofs: %08X, p->read_bytes: %08X, p->upage: %08X, p->zero_bytes: %08X\n", 
-            // fault_addr, p->ofs, p->read_bytes, p->upage, p->zero_bytes);
+          //   fault_addr, p->ofs, p->read_bytes, p->upage, p->zero_bytes);
           // printf("fault pt_no: %d, upage pt_no: %d\n", pt_no(fault_addr), pt_no(p->upage));
           dont_kill = load_segment(p->file, p->ofs, p->upage, p->read_bytes, p->zero_bytes, p->writable);
- //         printf("load_segment returned %s\n", dont_kill ? "true" : "false");
+          // printf("load_segment returned %s\n", dont_kill ? "true" : "false");
           p->present = true;
         }
-        else if (pt_no(fault_addr) == pt_no(p->upage) && p->present == true) {
-          dont_kill = true;
+        // else if (pt_no(fault_addr) == pt_no(p->upage) && p->present == true) {    //Commenting out because it may not be necessary
+          // dont_kill = true;
  //         printf("fault address: %p, *fault_address: %d\n", fault_addr, *(int *)fault_addr);
-        }
     }
+    
 
- // test_frame_table(10);
-  //test_supp_page_table();
- // printf("End page_fault: \n\n\n\n");
+      //Stack growth heuristic
 
-  if (!dont_kill){
-   // printf("loaded\n"); {
-    // printf("lookup_page: %p\n", pagedir_get_page(thread_current()->pagedir, fault_addr));
-      /* To implement virtual memory, delete the rest of the function
-     body, and replace it with code that brings in the page to
-     which fault_addr refers. */
-    printf ("Page fault at %p: %s error %s page in %s context.\n",
-            fault_addr,
-            not_present ? "not present" : "rights violation",
-            write ? "writing" : "reading",
-            user ? "user" : "kernel");
-
-    printf("There is no crying in Pintos!\n");
-    kill (f);
+    // printf("stack access, stack: %p, fault: %p, difference: %u\n", f->esp, fault_addr, (unsigned)fault_addr - (unsigned)f->esp);
+  if ((unsigned)fault_addr - (unsigned)f->esp <= 32 || (unsigned)f->esp - (unsigned)fault_addr <= 32) {
+    // printf("stack access, stack: %p, fault: %p, difference: %u\n", f->esp, fault_addr, (unsigned)fault_addr - (unsigned)f->esp);
+    // printf("stack access, stack: %p, fault: %p, difference: %u\n", f->esp, fault_addr, (unsigned)f->esp - (unsigned)fault_addr);
+    // printf("page stack stuff %p\n", (PHYS_BASE) - PGSIZE);
+    // printf("(unsigned)fault_addr - (unsigned)f->esp %d\n", (unsigned)thread_current()->esp - (unsigned)fault_addr);
+      uint8_t *kpage = get_frame(((uint8_t *) thread_current()->esp) - PGSIZE);
+      bool success = install_page (((uint8_t *) thread_current()->esp) - PGSIZE, kpage, true);
+      dont_kill = success;
+      load_supp_page(NULL, 0, NULL, 0, 0, true, true);
+      thread_current()->esp -= PGSIZE;
+  }
+  else if (!dont_kill){
+      printf("execption.c\n");
+      exit(-1);
   }
 }
 

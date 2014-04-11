@@ -28,12 +28,14 @@ struct supp_page {
 	uint32_t read_bytes;
 	uint32_t zero_bytes;
 	bool writable;
-  bool present;
+    bool present;
+    bool is_stack;
 
 	struct list_elem suppelem;
 };
 
 void supp_page_table_init (void);
+struct supp_page * search_supp_table(uint8_t *upage);
 bool load_supp_page(struct file *file, off_t ofs, uint8_t *upage,
-              uint32_t read_bytes, uint32_t zero_bytes, bool writable);
+              uint32_t read_bytes, uint32_t zero_bytes, bool writable, bool is_stack);
 void test_supp_page_table(void);
