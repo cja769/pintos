@@ -35,7 +35,7 @@ struct supp_page {
 };
 
 void supp_page_table_init (void);
-struct supp_page * search_supp_table(uint8_t *upage);
+struct supp_page * search_supp_table(uint8_t *upage, struct thread* t);
 bool load_supp_page(struct file *file, off_t ofs, uint8_t *upage,
               uint32_t read_bytes, uint32_t zero_bytes, bool writable, bool is_stack);
 void test_supp_page_table(void);

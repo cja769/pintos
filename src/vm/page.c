@@ -30,10 +30,10 @@ bool load_supp_page(struct file *file, off_t ofs, uint8_t *upage,
 	return true;
 }
 
-struct supp_page * search_supp_table(uint8_t *upage){
+struct supp_page * search_supp_table(uint8_t *upage, struct thread* t){
 	struct list_elem *e;
 	struct supp_page *p;
-    for (e = list_begin (&thread_current()->supp_page_table); e != list_end(&thread_current()->supp_page_table); e = list_next(e)){
+    for (e = list_begin (&t->supp_page_table); e != list_end(&t->supp_page_table); e = list_next(e)){
     	p = list_entry (e, struct supp_page, suppelem);
     	if(p->upage == upage){
     		return p;

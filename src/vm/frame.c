@@ -77,7 +77,7 @@ bool frame_evict () {
 		replace_frame = frames[replace_count];
 		t = replace_frame.t;
 		upage = replace_frame.occupier;
-		p = search_supp_table(upage);
+		p = search_supp_table(upage, t);
 		// //if((p->is_stack) && ass_count)
 		// 	ASSERT(!(p->is_stack))
 		// //else if ((p->is_stack))
@@ -90,16 +90,16 @@ bool frame_evict () {
 			//ASSERT ( 0 == 1);
 			go = false;
 		}
-		else if(p != NULL && p->is_stack) {
-			/* We are evicting a stack page to the swap space, but must 
-			   update the supp_page to reflect the ofs into the swap partition
-			   so that it may be reloaded into memory in the future */
-			p->file = NULL;
-			p->ofs = NULL;
-			p->read_bytes = 0;
-			p->zero_bytes = 0;
-			p->present = false;
-		}
+		/*else if(p != NULL && p->is_stack) {
+			 // We are evicting a stack page to the swap space, but must 
+			   // update the supp_page to reflect the ofs into the swap partition
+			   // so that it may be reloaded into memory in the future 
+			// p->file = NULL;
+			// p->ofs = NULL;
+			// p->read_bytes = 0;
+			// p->zero_bytes = 0;
+			// p->present = false;
+		}*/
 		else {
 			replace_count++;
 			if(replace_count >= NUM_FRAMES)
