@@ -33,8 +33,8 @@ void test_frame_table(int max){
 	int i;
 	// int j;
 	for(i = 0; i < max; i++){
-		printf("frames[%d].occupier = %p,	 *(frames[%d].physical) = %p,    frames[%d].t->name = %s    pagedir_is_dirty = %d\n",i,frames[i].occupier,
-			i, *(frames[i].physical), i,frames[i].t->name, pagedir_is_dirty(frames[i].t->pagedir,frames[i].occupier));
+		printf("frames[%d].occupier = %p,	 (frames[%d].physical) = %p,    frames[%d].t->name = %s\n",i,frames[i].occupier,
+			i, (frames[i].physical), i, frames[i].t->name); // pagedir_is_dirty(frames[i].t->pagedir,frames[i].occupier));
 		// for(j = 0; j < 128; j++)
 		// 	printf("Address %p = %p\n",(frames[i].physical)+(4*j), *((frames[i].physical)+(4*j)));
 		// printf("\n");
@@ -59,6 +59,26 @@ bool return_frame (uint32_t *addr) {
 		}
 	}
 	return false;
+}
+
+bool return_frame_by_tid (tid_t tid){
+	bool found = false;
+	int i;
+	struct thread *thread;
+	uint8_t *up;
+	for(i = 0; i < NUM_FRAMES; i++) {
+		if(frames[i].t->tid == tid){
+			up = frames[i].occupier;
+			frames[i].occupier = NULL;
+			thread = frames[i].t;
+			frames[i].t = get_initial_thread();
+			free_frames++;
+			found = true;
+			pagedir_clear_page (thread->pagedir, up);
+
+		}
+	}
+	return found;
 }
 
 bool frame_evict () {
@@ -110,12 +130,15 @@ bool frame_evict () {
 uint32_t * get_frame (uint32_t *occu) {
 	uint32_t* temp_frame = NULL;
 	int i;
-	//lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
+	if(!thread_current()->holds_vm_lock)
+		lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
+    thread_current ()->holds_vm_lock = true;
+
 	if(free_frames == 0) {
 		if(!frame_evict()) 
 			exit(-1);
 	}
-	lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
+	// lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
 	for(i = 0; i < NUM_FRAMES; i++) {
 		if(frames[i].occupier == NULL){
 			free_frames--;
@@ -125,8 +148,8 @@ uint32_t * get_frame (uint32_t *occu) {
 			break;
 		}
 	}
-
 	lock_release (thread_current ()->vm_lock); // Release the vm_lock
+	thread_current ()->holds_vm_lock = false;
 	return temp_frame;
 }
 

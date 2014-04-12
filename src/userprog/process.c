@@ -38,6 +38,8 @@ process_execute (const char *file_name)
   struct args *arguments = palloc_get_page(0);
   struct thread *t = thread_current();
   struct list_elem *e;
+   
+  //printf("file name: %s file name size = %d\n", file_name, strlen(file_name));
 
   char *fn_copy;
   tid_t tid;
@@ -51,6 +53,7 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
+  //printf("length = %d\n",length);
   char *temp = palloc_get_page(0); 
   temp = strtok_r(fn_copy, " ", &saveptr);
   arguments->argv = palloc_get_page(0);
@@ -69,6 +72,7 @@ process_execute (const char *file_name)
   }  
 
   /* Create a new thread to execute FILE_NAME. */
+  // printf("filen_name before create = %s\n", file_name);
   tid = thread_create (file_name, PRI_DEFAULT, start_process, arguments);
   /* The parent thread running this method will wait for exec to finish
    If the child process failed to load, this method returns -1 */
@@ -167,11 +171,13 @@ process_wait (tid_t child_tid)
         while (copy->status != THREAD_DYING)
         {
           sema_down(&copy->mutex);
+          //printf("in while loop process_wait\n");
         }
 
         ASSERT (copy->status == THREAD_DYING); 
         exit_status = copy->exit_status;
         list_remove (e);
+        //printf("at end of process_wait\n");
         return exit_status;
       } // break
     }
@@ -478,8 +484,11 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
   bool file_null = file == NULL;
-  if(!file_null)
+  if(!file_null){
+    //lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
     file_seek (file, ofs);
+    //lock_release (thread_current ()->vm_lock); // Release the vm_lock
+  }
   while ((read_bytes > 0 || zero_bytes > 0) && !file_null) 
     {
       /* Calculate how to fill this page.
@@ -495,12 +504,19 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
         return false;
       }
       /* Load this page. */
+      lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
+      thread_current ()->holds_vm_lock = true;
       if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
         {
+          lock_release (thread_current ()->vm_lock); // Release the vm_lock
+          thread_current ()->holds_vm_lock = false;
+
 	  //printf("file read was invalid\n");
           return_frame (upage);
           return false; 
         }
+      lock_release (thread_current ()->vm_lock); // Release the vm_lock
+      thread_current ()->holds_vm_lock = false;
       memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
       /* Add the page to the process's address space. */

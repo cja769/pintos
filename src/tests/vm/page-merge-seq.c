@@ -48,6 +48,7 @@ sort_chunks (void)
 
       msg ("sort chunk %zu", i);
 
+
       /* Write this chunk to a file. */
       quiet = true;
       CHECK ((handle = open ("buffer")) > 1, "open \"buffer\"");
@@ -59,11 +60,12 @@ sort_chunks (void)
              "exec \"child-sort buffer\"");
       CHECK (wait (child) == 123, "wait for child-sort");
 
+      //msg("sorted");
+
       /* Read chunk back from file. */
       CHECK ((handle = open ("buffer")) > 1, "open \"buffer\"");
       read (handle, buf1 + CHUNK_SIZE * i, CHUNK_SIZE);
       close (handle);
-
       quiet = false;
     }
 }

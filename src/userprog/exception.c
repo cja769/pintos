@@ -170,6 +170,7 @@ page_fault (struct intr_frame *f)
 
 
   struct list_elem *e;
+ 
   for (e = list_begin (&thread_current()->supp_page_table); e != list_end(&thread_current()->supp_page_table) && !dont_kill; e = list_next(e))
     {
         struct supp_page *p = list_entry (e, struct supp_page, suppelem);
@@ -177,20 +178,36 @@ page_fault (struct intr_frame *f)
           // printf("fault_addr: %08X, p->ofs: %08X, p->read_bytes: %08X, p->upage: %08X, p->zero_bytes: %08X\n", 
             // fault_addr, p->ofs, p->read_bytes, p->upage, p->zero_bytes);
           // printf("fault pt_no: %d, upage pt_no: %d\n", pt_no(fault_addr), pt_no(p->upage));
+
           if(p->sector == (unsigned int) -1){ 
            // printf("page faulted and reading from file\n");
+            //printf("about to acquire lock\n");
+            // lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
+            // thread_current ()->holds_vm_lock = true;
+            //printf("lock acquired\n");
             dont_kill = load_segment(p->file, p->ofs, p->upage, p->read_bytes, p->zero_bytes, p->writable);
+            //printf("about to release lock\n");
+            // lock_release (thread_current ()->vm_lock); // Release the vm_lock
+            // thread_current ()->holds_vm_lock = false;
+            //printf("lock released\n");
           }
           else{
            // printf("reading from swap\n");
+            lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
+            thread_current ()->holds_vm_lock = true;
             uint8_t * start = read_from_swap(p);
+            lock_release (thread_current ()->vm_lock); // Release the vm_lock
+            thread_current ()->holds_vm_lock = false;
             if(start != NULL){
               uint8_t *kpage = get_frame(p->upage);
              // printf("upage = %p, kpage = %p, and start = %p\n",p->upage,kpage,start);
               memcpy(kpage,start,PGSIZE);
               palloc_free_page((void*)start);
               dont_kill = install_page(p->upage,kpage,p->writable);
-              pagedir_set_dirty (thread_current()->pagedir,p->upage,true);
+              //printf("*kpage = %p\n",*kpage);
+              if(dont_kill)
+                pagedir_set_dirty (thread_current()->pagedir,p->upage,true);
+
             }
             else{
               printf("start is null for some reason\n");
@@ -198,8 +215,9 @@ page_fault (struct intr_frame *f)
           }
 
           // printf("load_segment returned %s\n", dont_kill ? "true" : "false");
-        if(dont_kill)
+        if(dont_kill){
           p->present = true;
+        }
         // else
           // printf("dont_kill is stil false for some reason\n");
         }
@@ -220,10 +238,11 @@ page_fault (struct intr_frame *f)
       uint8_t *kpage = get_frame(((uint8_t *) thread_current()->esp) - PGSIZE);
       bool success = install_page (((uint8_t *) thread_current()->esp) - PGSIZE, kpage, true);
       dont_kill = success;
-      load_supp_page(NULL, 0, NULL, 0, 0, true, true);
+      load_supp_page(NULL, 0, ((uint8_t *) thread_current()->esp), 0, 0, true, true);
       thread_current()->esp -= PGSIZE;
   }
   else if (!dont_kill){
+    //ASSERT(0==1);
     //printf("fault address: %p\n", fault_addr);
     //test_frame_table(383);
     //printf("execption.c\n");

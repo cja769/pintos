@@ -26,4 +26,4 @@ struct frame * frame_create (void);
 void test_frame_table(int max);
 void frame_table_init (void);
 bool return_frame (uint32_t *addr);
-
+bool return_frame_by_tid (tid_t tid);

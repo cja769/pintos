@@ -54,7 +54,7 @@ get_arg (int *esp, bool is_pointer)
   bool exit_bool = true;
   // Calvin drove this method
   if (is_pointer) {
-    if(pagedir_get_page(thread_current()->pagedir, (int *)*esp) == NULL){
+    if(is_user_vaddr((int *)*esp) && pagedir_get_page(thread_current()->pagedir, (int *)*esp) == NULL){ //If not found in pagedir (not in frame table)
       p = search_supp_table(fixed_esp,thread_current());
       exit_bool = p == NULL ? true : false;
     }
@@ -106,9 +106,11 @@ void exit (int status) {
   // When a process exits, sema_up to allow its parent to return
   sema_up(&copy->mutex); 
 
+
   /* Close and allow write to files inode for rox */
   file_allow_write(t->exe);
   file_close(t->exe); 
+  return_frame_by_tid (t->tid);
   thread_exit();
 }
 
@@ -197,8 +199,10 @@ int read (int fd, void *buffer, unsigned size) {
   }
     /* Acquire a lock to read a file in file_sys */
     lock_acquire(t->io_lock);
+    thread_current ()->holds_vm_lock = true;
     result = file_read (t->file_list[fd], buffer, size);
     lock_release (t->io_lock);
+    thread_current ()->holds_vm_lock = false;
     return result;
   }
   else if(fd == 0){
@@ -209,15 +213,15 @@ int read (int fd, void *buffer, unsigned size) {
       memcpy(&temp, buffer_, sizeof(char));
     }
     /* Acquire a lock to read a file in file_sys */
-    lock_acquire(t->io_lock);
+    lock_acquire(t->vm_lock);
     result = file_read (t->file_list[fd], buffer, size);
-    lock_release (t->io_lock);
+    lock_release (t->vm_lock);
     return result;
   }
     /* Acquire a lock to read a file in file_sys */
-    lock_acquire(t->io_lock);
+    lock_acquire(t->vm_lock);
     result = file_read (t->file_list[fd], buffer, size);
-    lock_release (t->io_lock);
+    lock_release (t->vm_lock);
     return result;
 }
 
@@ -239,9 +243,11 @@ int write (int fd, const void *buffer, unsigned size)
       exit(-1);
   }
     /* Acquire a lock to write to file_sys */
-    lock_acquire(t->io_lock);
+    lock_acquire(t->vm_lock);
+    thread_current ()->holds_vm_lock = true;
     result = file_write(t->file_list[fd], buffer, size);
-    lock_release (t->io_lock);
+    lock_release (t->vm_lock);
+    thread_current ()->holds_vm_lock = false;
     return result;
   }
 
@@ -263,7 +269,10 @@ void seek (int fd, unsigned position) {
   if (t->file_list[fd] == -1)
       exit(-1);
   struct file *file = t->file_list[fd];
+  //lock_acquire(t->vm_lock);
   file_seek (file, position);
+  //lock_release (t->vm_lock);
+
 }
 
 unsigned tell (int fd) {

@@ -38,7 +38,6 @@ struct supp_page * search_supp_table(uint8_t *upage, struct thread* t){
 	struct supp_page *p;
     for (e = list_begin (&t->supp_page_table); e != list_end(&t->supp_page_table); e = list_next(e)){
     	p = list_entry (e, struct supp_page, suppelem);
-	// pd_no(upage) == pd_no(p->upage)
     	if(p->upage == upage) {
     		return p;
     	}
