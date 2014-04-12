@@ -130,6 +130,7 @@ main (void)
 
   //*******************************************//
   frame_table_init();      // initializes our frame table
+  swap_init();             // initialize swap table
   //*******************************************//
 
   printf ("Boot complete.\n");

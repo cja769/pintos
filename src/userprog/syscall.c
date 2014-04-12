@@ -14,6 +14,8 @@
 #include "userprog/pagedir.h"
 #include <string.h>
 #include <stdarg.h> 
+#include "vm/page.h"
+#include "threads/pte.h" 
 
 /* Protoypes */
 void file_index_increment ();
@@ -44,10 +46,16 @@ void file_index_increment () {
 int
 get_arg (int *esp, bool is_pointer)
 {
+  struct supp_page *p = NULL;
+
   // Calvin drove this method
   if (is_pointer) {
-    if ((int *)*esp == NULL || !is_user_vaddr((int *)*esp) || pagedir_get_page(thread_current()->pagedir, (int *)*esp) == NULL)
+    //if(pagedir_get_page(thread_current()->pagedir, (int *)*esp) == NULL){ (pagedir_get_page(thread_current()->pagedir, (int *)*esp) == NULL &&
+      p = search_supp_table(esp,thread_current());
+    //}
+    if ((int *)*esp == NULL || !is_user_vaddr((int *)*esp) || p == NULL) {
       exit(-1);
+    }
   }
   return *esp;
 }
@@ -71,7 +79,7 @@ void exit (int status) {
 
   /* Loop through the parents list of children to find the copy that matches this thread... */
   struct list_elem *e;
-  struct thread *copy;
+  struct thread *copy = NULL;
 
   for (e = list_begin (&t->parent->children); e != list_end (&t->parent->children);
        e = list_next (e))
@@ -85,7 +93,6 @@ void exit (int status) {
       break;
     }
   }
-
   char *saveptr;
   printf ("%s: exit(%d)\n", strtok_r(copy->name, " ", &saveptr), copy->exit_status); 
 
@@ -269,13 +276,16 @@ unsigned tell (int fd) {
 void close (int fd) {
   // Calvin and Samantha took turns driving this system_call
   // Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
-  if (fd >= 130 || fd < 0)
+  if (fd >= 130 || fd < 0){
       exit(-1);
+  } 
   struct thread *t = thread_current();
-  if (fd >= 2)
+  if (fd >= 2){
     fd -=2;
-  if (t->file_list[fd] == -1)
+  }
+  if (t->file_list[fd] == -1){
       exit(-1);
+  }
   if (t->file_list[fd] != -1) {
     struct file * file = t->file_list[fd];
     file_close (file);
@@ -299,7 +309,6 @@ syscall_handler (struct intr_frame *f)
 
   /* This is OFTEN used for debugging and tracing the system calls pintos makes */
   // printf("Syscall number: %d\n", syscall_number);
-
   switch (syscall_number) {
     case 0: { //HALT
       halt();

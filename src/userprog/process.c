@@ -17,8 +17,10 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
-#include "vm/page.h"
+//#include "vm/page.h"
 #include "vm/frame.h"
+#include "threads/malloc.h"
+
 
 static thread_func start_process NO_RETURN;
 static bool load (struct args *file_name, void (**eip) (void), void **esp);
@@ -295,7 +297,6 @@ load (struct args *file_name, void (**eip) (void), void **esp)
 {
   // Dustin drove this method
   char *file_ = *file_name->argv;
-
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
   struct file *file = NULL;
@@ -479,7 +480,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   bool file_null = file == NULL;
   if(!file_null)
     file_seek (file, ofs);
-  while (read_bytes > 0 || zero_bytes > 0 && !file_null) 
+  while ((read_bytes > 0 || zero_bytes > 0) && !file_null) 
     {
       /* Calculate how to fill this page.
          We will read PAGE_READ_BYTES bytes from FILE
@@ -503,7 +504,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       /* Add the page to the process's address space. */
       if (!install_page (upage, kpage, writable)) 
         {
-          ASSERT( 0 == 1);
           return_frame (upage);
           return false; 
         }

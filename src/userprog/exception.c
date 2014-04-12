@@ -8,7 +8,7 @@
 #include "userprog/syscall.h"
 #include "userprog/process.h"
 #include "vm/frame.h"
-#include "vm/page.h"
+//#include "vm/page.h"
 #include "threads/pte.h"
 
 /* Number of page faults processed. */
@@ -161,7 +161,7 @@ page_fault (struct intr_frame *f)
 
   bool dont_kill = false; // true or false if we are loading this faulting address THIS time, formerly called loaded
 
-//  printf("\n\n\nBegin page_fault: \n");
+  //printf("\n\n\nBegin page_fault: \n");
 //  test_frame_table(10);
   //test_supp_page_table();
 
@@ -175,15 +175,37 @@ page_fault (struct intr_frame *f)
         struct supp_page *p = list_entry (e, struct supp_page, suppelem);
         if (pt_no(fault_addr) == pt_no(p->upage) && p->present == false) {
           // printf("fault_addr: %08X, p->ofs: %08X, p->read_bytes: %08X, p->upage: %08X, p->zero_bytes: %08X\n", 
-          //   fault_addr, p->ofs, p->read_bytes, p->upage, p->zero_bytes);
+            // fault_addr, p->ofs, p->read_bytes, p->upage, p->zero_bytes);
           // printf("fault pt_no: %d, upage pt_no: %d\n", pt_no(fault_addr), pt_no(p->upage));
-          dont_kill = load_segment(p->file, p->ofs, p->upage, p->read_bytes, p->zero_bytes, p->writable);
+          if(p->sector == (unsigned int) -1){ 
+            //printf("page faulted and reading from file\n");
+            dont_kill = load_segment(p->file, p->ofs, p->upage, p->read_bytes, p->zero_bytes, p->writable);
+          }
+          else{
+            //printf("reading from swap\n");
+            uint8_t * start = read_from_swap(p);
+            if(start != NULL){
+              uint8_t *kpage = get_frame(p->upage);
+              //printf("upage = %p, kpage = %p, and start = %p\n",p->upage,kpage,start);
+              memcpy(kpage,start,PGSIZE);
+              palloc_free_page((void*)start);
+              dont_kill = install_page(p->upage,kpage,p->writable);
+              pagedir_set_dirty (thread_current()->pagedir,p->upage,true);
+            }
+            else{
+              printf("start is null for some reason\n");
+            }
+          }
+
           // printf("load_segment returned %s\n", dont_kill ? "true" : "false");
+        if(dont_kill)
           p->present = true;
+        // else
+          // printf("dont_kill is stil false for some reason\n");
         }
         // else if (pt_no(fault_addr) == pt_no(p->upage) && p->present == true) {    //Commenting out because it may not be necessary
           // dont_kill = true;
- //         printf("fault address: %p, *fault_address: %d\n", fault_addr, *(int *)fault_addr);
+        // printf("fault address: %p, *fault_address: %d\n", fault_addr, *(int *)fault_addr);
     }
     
 
@@ -202,8 +224,11 @@ page_fault (struct intr_frame *f)
       thread_current()->esp -= PGSIZE;
   }
   else if (!dont_kill){
-      //printf("execption.c\n");
-      exit(-1);
+    //printf("fault address: %p\n", fault_addr);
+    //test_frame_table(383);
+    //printf("execption.c\n");
+    exit(-1);
   }
 }
+
 

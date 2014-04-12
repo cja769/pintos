@@ -1,5 +1,6 @@
 #include "lib/kernel/list.h"
 #include <stdint.h>
+#include "vm/swap.h"
 
 #define NUM_FRAMES 383
 

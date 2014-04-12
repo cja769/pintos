@@ -20,6 +20,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "devices/block.h"
 
 struct supp_page {
   struct file *file;
@@ -27,6 +28,7 @@ struct supp_page {
   uint8_t *upage;
   uint32_t read_bytes;
   uint32_t zero_bytes;
+  block_sector_t sector;
   bool writable;
   bool present;
   bool is_stack;
@@ -34,6 +36,7 @@ struct supp_page {
   struct list_elem suppelem;
 };
 
+/* Prototypes */
 void supp_page_table_init (void);
 struct supp_page * search_supp_table(uint8_t *upage, struct thread* t);
 bool load_supp_page(struct file *file, off_t ofs, uint8_t *upage,

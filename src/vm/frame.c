@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "threads/palloc.h"
 #include "threads/thread.h"
-#include "vm/page.h"
+#include "userprog/syscall.h"
 
 // static struct frame_table *ftb;						// Stores the one and only frame table
 int free_frames;				// The max number of frames in the frame table
@@ -33,8 +33,8 @@ void test_frame_table(int max){
 	int i;
 	// int j;
 	for(i = 0; i < max; i++){
-		printf("frames[%d].occupier = %p,	 frames[%d].physical = %p,    frames[%d].t->name = %s\n",i,frames[i].occupier,
-			i, frames[i].physical, i,frames[i].t->name);
+		printf("frames[%d].occupier = %p,	 *(frames[%d].physical) = %p,    frames[%d].t->name = %s    pagedir_is_dirty = %d\n",i,frames[i].occupier,
+			i, *(frames[i].physical), i,frames[i].t->name, pagedir_is_dirty(frames[i].t->pagedir,frames[i].occupier));
 		// for(j = 0; j < 128; j++)
 		// 	printf("Address %p = %p\n",(frames[i].physical)+(4*j), *((frames[i].physical)+(4*j)));
 		// printf("\n");
@@ -65,51 +65,43 @@ bool frame_evict () {
 	//printf("in frame evict\n");
 	//int* count = t->replace_count;
 	//int cnt = *count;
-	lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
-	thread_current ()->holds_vm_lock = true;
+	// lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
+	// thread_current ()->holds_vm_lock = true;
 	struct thread *t;
-	int ass_count = 0;
 	uint8_t *upage;
 	struct frame replace_frame;
 	struct supp_page * p;
 	bool go = true;
+	bool wrote_to_swap = false;
+	bool dirty;
 	while(go){
 		replace_frame = frames[replace_count];
 		t = replace_frame.t;
 		upage = replace_frame.occupier;
 		p = search_supp_table(upage, t);
-		// //if((p->is_stack) && ass_count)
 		// 	ASSERT(!(p->is_stack))
 		// //else if ((p->is_stack))
 		// //	ass_count++;
-		if(p != NULL && !(p->is_stack)){
-			/* We are evicting a non-stack page from frames, and can 
-				 safely "throw it away" if its not dirty */
-			pagedir_clear_page (t->pagedir, upage);
-			p->present = false;
-			//ASSERT ( 0 == 1);
-			go = false;
+		if(p != NULL){
+			dirty = pagedir_is_dirty(t->pagedir, upage);
+			if(dirty){
+				wrote_to_swap = write_to_swap(upage, p);
+			}
+			if(!dirty || wrote_to_swap){
+				pagedir_clear_page (t->pagedir, upage);
+				p->present = false;
+				go = false;
+			}
+		else
+			ASSERT ( 0 == 1);
 		}
-		/*else if(p != NULL && p->is_stack) {
-			 // We are evicting a stack page to the swap space, but must 
-			   // update the supp_page to reflect the ofs into the swap partition
-			   // so that it may be reloaded into memory in the future 
-			// p->file = NULL;
-			// p->ofs = NULL;
-			// p->read_bytes = 0;
-			// p->zero_bytes = 0;
-			// p->present = false;
-		}*/
-		else {
-			replace_count++;
-			if(replace_count >= NUM_FRAMES)
-				replace_count = 0; 
-		}
+		replace_count++;
+		replace_count = replace_count%NUM_FRAMES;
 	}
 	//*count = cnt;
 	//printf("replace_count = %d\n",replace_count);
-	lock_release (thread_current ()->vm_lock); // Release the vm_lock
-	thread_current ()->holds_vm_lock = false;
+	// lock_release (thread_current ()->vm_lock); // Release the vm_lock
+	// thread_current ()->holds_vm_lock = false;
 	return return_frame(upage);
 }
 
@@ -120,7 +112,7 @@ uint32_t * get_frame (uint32_t *occu) {
 	int i;
 	//lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
 	if(free_frames == 0) {
-		if(!frame_evict())
+		if(!frame_evict()) 
 			exit(-1);
 	}
 	lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock

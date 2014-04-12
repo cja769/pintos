@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include "threads/palloc.h"
 #include "threads/thread.h"
+#include "threads/pte.h"
+
 
 /* Initialize this supplemental page table */
 void supp_page_table_init () {
@@ -25,6 +27,7 @@ bool load_supp_page(struct file *file, off_t ofs, uint8_t *upage,
 	p->writable = writable;
     p->present = false;
     p->is_stack = is_stack;
+    p->sector = -1;
 	list_push_back(&thread_current ()->supp_page_table, &p->suppelem);
 	// test_supp_page_table();
 	return true;
@@ -35,7 +38,7 @@ struct supp_page * search_supp_table(uint8_t *upage, struct thread* t){
 	struct supp_page *p;
     for (e = list_begin (&t->supp_page_table); e != list_end(&t->supp_page_table); e = list_next(e)){
     	p = list_entry (e, struct supp_page, suppelem);
-    	if(p->upage == upage){
+    	if(p->upage == upage || pd_no(upage) == pd_no(p->upage)){
     		return p;
     	}
     }
