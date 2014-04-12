@@ -166,7 +166,7 @@ page_fault (struct intr_frame *f)
   //test_supp_page_table();
 
   //printf("fault address: %p, f->eip: %p\n", fault_addr, f->eip);
-  //printf("fault address: %p\n", fault_addr);
+ // printf("fault address: %p\n", fault_addr);
 
 
   struct list_elem *e;
@@ -178,15 +178,15 @@ page_fault (struct intr_frame *f)
             // fault_addr, p->ofs, p->read_bytes, p->upage, p->zero_bytes);
           // printf("fault pt_no: %d, upage pt_no: %d\n", pt_no(fault_addr), pt_no(p->upage));
           if(p->sector == (unsigned int) -1){ 
-            //printf("page faulted and reading from file\n");
+           // printf("page faulted and reading from file\n");
             dont_kill = load_segment(p->file, p->ofs, p->upage, p->read_bytes, p->zero_bytes, p->writable);
           }
           else{
-            //printf("reading from swap\n");
+           // printf("reading from swap\n");
             uint8_t * start = read_from_swap(p);
             if(start != NULL){
               uint8_t *kpage = get_frame(p->upage);
-              //printf("upage = %p, kpage = %p, and start = %p\n",p->upage,kpage,start);
+             // printf("upage = %p, kpage = %p, and start = %p\n",p->upage,kpage,start);
               memcpy(kpage,start,PGSIZE);
               palloc_free_page((void*)start);
               dont_kill = install_page(p->upage,kpage,p->writable);

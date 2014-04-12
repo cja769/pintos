@@ -490,12 +490,14 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
       /* Get a page of memory. */
       uint8_t *kpage = get_frame(upage);
-      if (kpage == NULL)
+      if (kpage == NULL){
+	//printf("kpage null in load_segment\n");
         return false;
-
+      }
       /* Load this page. */
       if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
         {
+	  //printf("file read was invalid\n");
           return_frame (upage);
           return false; 
         }
@@ -504,6 +506,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       /* Add the page to the process's address space. */
       if (!install_page (upage, kpage, writable)) 
         {
+	  //printf("install_page failed\n");
           return_frame (upage);
           return false; 
         }

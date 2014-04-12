@@ -47,13 +47,20 @@ int
 get_arg (int *esp, bool is_pointer)
 {
   struct supp_page *p = NULL;
-
+  //printf("in get_arg\n");
+  int fix_esp = esp;
+  fix_esp = fix_esp & 0xfffff000;
+  int * fixed_esp = (int*) fix_esp;
+  bool exit_bool = true;
   // Calvin drove this method
   if (is_pointer) {
-    //if(pagedir_get_page(thread_current()->pagedir, (int *)*esp) == NULL){ (pagedir_get_page(thread_current()->pagedir, (int *)*esp) == NULL &&
-      p = search_supp_table(esp,thread_current());
-    //}
-    if ((int *)*esp == NULL || !is_user_vaddr((int *)*esp) || p == NULL) {
+    if(pagedir_get_page(thread_current()->pagedir, (int *)*esp) == NULL){
+      p = search_supp_table(fixed_esp,thread_current());
+      exit_bool = p == NULL ? true : false;
+    }
+    else
+      exit_bool = false;
+    if ((int *)*esp == NULL || !is_user_vaddr((int *)*esp) || exit_bool) {
       exit(-1);
     }
   }
