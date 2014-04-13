@@ -111,6 +111,8 @@ void exit (int status) {
   file_allow_write(t->exe);
   file_close(t->exe); 
   return_frame_by_tid (t->tid);
+  //if(t->holds_vm_lock)
+    //lock_release(t->vm_lock);
   thread_exit();
 }
 
@@ -185,7 +187,21 @@ int read (int fd, void *buffer, unsigned size) {
   // Calvin and Samantha took turns driving this system_call
   struct thread *t = thread_current();
   int result;
+  int temp_size = size;
+  bool worked = true;
+  void* temp_buffer = buffer;
   //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
+  //  while(temp_size > PGSIZE && worked) {
+  //   read(fd, temp_buffer, PGSIZE);
+  //   worked = call_page_fault(temp_buffer);
+  //   temp_buffer+= PGSIZE;
+  //   temp_size -= PGSIZE;
+  //   //printf("worked = %d, temp_buffer = %p, and temp_size = %d\n",worked,temp_buffer,temp_size);
+  // }
+  // if(temp_size > 0 && worked){
+  //   worked = call_page_fault(temp_buffer);
+  //   //printf("worked = %d, temp_buffer = %p, and temp_size = %d\n",worked,temp_buffer,temp_size);
+  // }
   if (fd >= 130 || fd < 0 || fd == 1)
   {
       exit(-1);
@@ -198,10 +214,10 @@ int read (int fd, void *buffer, unsigned size) {
       exit(-1);
   }
     /* Acquire a lock to read a file in file_sys */
-    lock_acquire(t->io_lock);
+    lock_acquire(t->vm_lock);
     thread_current ()->holds_vm_lock = true;
     result = file_read (t->file_list[fd], buffer, size);
-    lock_release (t->io_lock);
+    lock_release (t->vm_lock);
     thread_current ()->holds_vm_lock = false;
     return result;
   }
@@ -214,14 +230,18 @@ int read (int fd, void *buffer, unsigned size) {
     }
     /* Acquire a lock to read a file in file_sys */
     lock_acquire(t->vm_lock);
+    thread_current ()->holds_vm_lock = true;
     result = file_read (t->file_list[fd], buffer, size);
     lock_release (t->vm_lock);
+    thread_current ()->holds_vm_lock = false;
     return result;
   }
     /* Acquire a lock to read a file in file_sys */
     lock_acquire(t->vm_lock);
+    thread_current ()->holds_vm_lock = true;;
     result = file_read (t->file_list[fd], buffer, size);
     lock_release (t->vm_lock);
+    thread_current ()->holds_vm_lock = false;
     return result;
 }
 

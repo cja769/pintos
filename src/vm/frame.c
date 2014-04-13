@@ -119,9 +119,7 @@ bool frame_evict () {
 		replace_count = replace_count%NUM_FRAMES;
 	}
 	//*count = cnt;
-	//printf("replace_count = %d\n",replace_count);
-	// lock_release (thread_current ()->vm_lock); // Release the vm_lock
-	// thread_current ()->holds_vm_lock = false;
+	//printf("replace_count = %d\n",replace_count); 
 	return return_frame(upage);
 }
 
@@ -130,15 +128,16 @@ bool frame_evict () {
 uint32_t * get_frame (uint32_t *occu) {
 	uint32_t* temp_frame = NULL;
 	int i;
-	if(!thread_current()->holds_vm_lock)
+	bool had_lock = thread_current()->holds_vm_lock;
+	if(!had_lock) {
 		lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
-    thread_current ()->holds_vm_lock = true;
+  	thread_current ()->holds_vm_lock = true;
+  }
 
 	if(free_frames == 0) {
 		if(!frame_evict()) 
 			exit(-1);
 	}
-	// lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
 	for(i = 0; i < NUM_FRAMES; i++) {
 		if(frames[i].occupier == NULL){
 			free_frames--;
@@ -148,8 +147,10 @@ uint32_t * get_frame (uint32_t *occu) {
 			break;
 		}
 	}
-	lock_release (thread_current ()->vm_lock); // Release the vm_lock
-	thread_current ()->holds_vm_lock = false;
+	if(!had_lock) {
+		lock_release (thread_current ()->vm_lock); // Release the vm_lock
+		thread_current ()->holds_vm_lock = false;
+	}
 	return temp_frame;
 }
 

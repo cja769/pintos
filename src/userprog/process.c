@@ -504,19 +504,26 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
         return false;
       }
       /* Load this page. */
-      lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
-      thread_current ()->holds_vm_lock = true;
+      bool had_lock = thread_current()->holds_vm_lock;
+      if(!had_lock){
+        lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
+        thread_current ()->holds_vm_lock = true;
+      }
       if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
         {
-          lock_release (thread_current ()->vm_lock); // Release the vm_lock
-          thread_current ()->holds_vm_lock = false;
+          if(!had_lock){
+            lock_release (thread_current ()->vm_lock); // Release the vm_lock
+            thread_current ()->holds_vm_lock = false;
+          }
 
 	  //printf("file read was invalid\n");
           return_frame (upage);
           return false; 
         }
-      lock_release (thread_current ()->vm_lock); // Release the vm_lock
-      thread_current ()->holds_vm_lock = false;
+      if(!had_lock){
+        lock_release (thread_current ()->vm_lock); // Release the vm_lock
+        thread_current ()->holds_vm_lock = false;
+      }
       memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
       /* Add the page to the process's address space. */

@@ -32,10 +32,10 @@ bool write_to_swap (uint8_t *upage, struct supp_page * p) {
 	//lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
 	//thread_current ()->holds_vm_lock = true;
 	for (i = 0, j = 0; i < PGSIZE; i += BLOCK_SECTOR_SIZE, j++) {
-		printf("writing to swap pass %d\n",j);
+		//printf("writing to swap pass %d\n",j);
 		// printf("upage = %p\n",upage + i);
 		block_write(swap_block, start_sector + j, upage + i); //Aaggghhh pointer stuff
-		printf("back from writing to swap pass %d\n",j);
+		//printf("back from writing to swap pass %d\n",j);
 	}
 
 	swap_size -= PGSIZE / BLOCK_SECTOR_SIZE;
