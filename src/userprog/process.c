@@ -38,8 +38,6 @@ process_execute (const char *file_name)
   struct args *arguments = palloc_get_page(0);
   struct thread *t = thread_current();
   struct list_elem *e;
-   
-  //printf("file name: %s file name size = %d\n", file_name, strlen(file_name));
 
   char *fn_copy;
   tid_t tid;
@@ -53,7 +51,6 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-  //printf("length = %d\n",length);
   char *temp = palloc_get_page(0); 
   temp = strtok_r(fn_copy, " ", &saveptr);
   arguments->argv = palloc_get_page(0);
@@ -84,7 +81,6 @@ process_execute (const char *file_name)
       if (copy->tid == tid && copy->exit_status == -1)
         tid = -1;
     }
-  //printf("%d\n", tid);
   if (tid == TID_ERROR) {
     palloc_free_page (fn_copy); 
   }
@@ -171,13 +167,11 @@ process_wait (tid_t child_tid)
         while (copy->status != THREAD_DYING)
         {
           sema_down(&copy->mutex);
-          //printf("in while loop process_wait\n");
         }
 
         ASSERT (copy->status == THREAD_DYING); 
         exit_status = copy->exit_status;
         list_remove (e);
-        //printf("at end of process_wait\n");
         return exit_status;
       } // break
     }
@@ -485,9 +479,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT (ofs % PGSIZE == 0);
   bool file_null = file == NULL;
   if(!file_null){
-    //lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
     file_seek (file, ofs);
-    //lock_release (thread_current ()->vm_lock); // Release the vm_lock
   }
   while ((read_bytes > 0 || zero_bytes > 0) && !file_null) 
     {
@@ -498,12 +490,12 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
       /* Get a page of memory. */
-      uint8_t *kpage = get_frame(upage);
+      uint8_t *kpage = get_frame(upage); //Our method, gets frame of physical memory
       if (kpage == NULL){
-	//printf("kpage null in load_segment\n");
-        return false;
+       return false;
       }
       /* Load this page. */
+      /* Jason and Calvin drove here for lock stuff */
       bool had_lock = thread_current()->holds_vm_lock;
       if(!had_lock){
         lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
@@ -516,8 +508,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
             thread_current ()->holds_vm_lock = false;
           }
 
-	  //printf("file read was invalid\n");
-          return_frame (upage);
+          return_frame (upage); //Invalid read, must return frame of phys memory
           return false; 
         }
       if(!had_lock){
@@ -529,8 +520,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       /* Add the page to the process's address space. */
       if (!install_page (upage, kpage, writable)) 
         {
-	  //printf("install_page failed\n");
-          return_frame (upage);
+          return_frame (upage); //Our method, returns frame that was acquired earlier
           return false; 
         }
 
@@ -542,17 +532,18 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   return true;
 }
 
+
+/* load_supp_segment - Loads information about a page into the supplemental page table
+   that will be used later to load the page into physical memory and the page directory */
 static bool
 load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
               uint32_t read_bytes, uint32_t zero_bytes, bool writable) 
 {
+  //Dustin and Samantha drove this method
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
   off_t new_ofs = ofs;
-  // printf("before seek\n");
-  // file_seek (file, ofs);
-  // printf("after seek\n");
   while (read_bytes > 0 || zero_bytes > 0) 
     {
       /* Calculate how to fill this page.
@@ -560,7 +551,6 @@ load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
          and zero the final PAGE_ZERO_BYTES bytes. */
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
-      // printf("IN LOAD_SUPP_SEGMENT!!!! upage: %p\n", upage);
       load_supp_page(file,new_ofs, (void *) upage, page_read_bytes, page_zero_bytes, writable, false); 
       new_ofs += (page_read_bytes + page_zero_bytes);
       /* Advance. */

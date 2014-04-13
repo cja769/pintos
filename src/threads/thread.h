@@ -27,7 +27,7 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
-static int replace_count;
+static int replace_count; //Index of next frame to evict, needs to be used globally
 
 
 /* A kernel thread or user process.
@@ -130,10 +130,8 @@ struct thread
     /* A list for supplemental page table */
     struct list supp_page_table;
 
-    //For stack growth
+    //For stack growth in case esp in frame is wrong
     uint8_t *esp;
-
-    //int* replace_count;
 
 
 #ifdef USERPROG

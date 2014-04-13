@@ -113,31 +113,24 @@ kill (struct intr_frame *f)
     }
 }
 
+/* call_page_fault - Brings faulting page into physical memory if possible 
+   Brings page from swap if it resides there */
+
 int call_page_fault (void * fault_addr){
+
+  //Calvin and Jason drove this method
+
   struct list_elem *e;
-  bool dont_kill = false;
+  bool dont_kill = false; //To be passed along to page_fault() if fault is appropriately dealt with
   for (e = list_begin (&thread_current()->supp_page_table); e != list_end(&thread_current()->supp_page_table) && !dont_kill; e = list_next(e))
     {
         struct supp_page *p = list_entry (e, struct supp_page, suppelem);
-        if (pt_no(fault_addr) == pt_no(p->upage) && p->present == false) {
-          // printf("fault_addr: %08X, p->ofs: %08X, p->read_bytes: %08X, p->upage: %08X, p->zero_bytes: %08X\n", 
-            // fault_addr, p->ofs, p->read_bytes, p->upage, p->zero_bytes);
-          // printf("fault pt_no: %d, upage pt_no: %d\n", pt_no(fault_addr), pt_no(p->upage));
+        if (pt_no(fault_addr) == pt_no(p->upage) && p->present == false) { //Page matches fault address and is not present
 
-          if(p->sector == (unsigned int) -1){ 
-           // printf("page faulted and reading from file\n");
-            //printf("about to acquire lock\n");
-            // lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
-            // thread_current ()->holds_vm_lock = true;
-            //printf("lock acquired\n");
+          if(p->sector == (unsigned int) -1){ //page has not been written to swap before
             dont_kill = load_segment(p->file, p->ofs, p->upage, p->read_bytes, p->zero_bytes, p->writable);
-            //printf("about to release lock\n");
-            // lock_release (thread_current ()->vm_lock); // Release the vm_lock
-            // thread_current ()->holds_vm_lock = false;
-            //printf("lock released\n");
           }
-          else{
-           // printf("reading from swap\n");
+          else
             bool had_lock = thread_current()->holds_vm_lock;
             if(!had_lock){
               lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
@@ -148,13 +141,11 @@ int call_page_fault (void * fault_addr){
               lock_release (thread_current ()->vm_lock); // Release the vm_lock
               thread_current ()->holds_vm_lock = false;
             }
-            if(start != NULL){
+            if(start != NULL){ //start should never be NULL
               uint8_t *kpage = get_frame(p->upage);
-             // printf("upage = %p, kpage = %p, and start = %p\n",p->upage,kpage,start);
               memcpy(kpage,start,PGSIZE);
               palloc_free_page((void*)start);
               dont_kill = install_page(p->upage,kpage,p->writable);
-              //printf("*kpage = %p\n",*kpage);
               if(dont_kill)
                 pagedir_set_dirty (thread_current()->pagedir,p->upage,true);
 
@@ -164,16 +155,10 @@ int call_page_fault (void * fault_addr){
             }
           }
 
-          // printf("load_segment returned %s\n", dont_kill ? "true" : "false");
-        if(dont_kill){
-          p->present = true;
+          if(dont_kill){
+            p->present = true;
+          }
         }
-        // else
-          // printf("dont_kill is stil false for some reason\n");
-        }
-        // else if (pt_no(fault_addr) == pt_no(p->upage) && p->present == true) {    //Commenting out because it may not be necessary
-          // dont_kill = true;
-        // printf("fault address: %p, *fault_address: %d\n", fault_addr, *(int *)fault_addr);
     }
     return dont_kill;
 }
@@ -223,25 +208,14 @@ page_fault (struct intr_frame *f)
   if (user && (!is_user_vaddr(fault_addr) || fault_addr == NULL))
     exit(-1);
 
-  bool dont_kill = call_page_fault(fault_addr); // true or false if we are loading this faulting address THIS time, formerly called loaded
 
-  //printf("\n\n\nBegin page_fault: \n");
-//  test_frame_table(10);
-  //test_supp_page_table();
 
-  //printf("fault address: %p, f->eip: %p\n", fault_addr, f->eip);
- // printf("fault address: %p\n", fault_addr);
+  /* Samantha drove here */
+  //Used to rule out reasons for page fault. Set to true if fault can be dealt with so that the process is not killed
+  bool dont_kill = call_page_fault(fault_addr);   
 
-    
-
-      //Stack growth heuristic
-
-    // printf("stack access, stack: %p, fault: %p, difference: %u\n", f->esp, fault_addr, (unsigned)fault_addr - (unsigned)f->esp);
+  //Stack growth heuristic: if faulting address is within 32 bytes of esp, create a new page for stack growth
   if ((unsigned)fault_addr - (unsigned)f->esp <= 32 || (unsigned)f->esp - (unsigned)fault_addr <= 32) {
-    // printf("stack access, stack: %p, fault: %p, difference: %u\n", f->esp, fault_addr, (unsigned)fault_addr - (unsigned)f->esp);
-    // printf("stack access, stack: %p, fault: %p, difference: %u\n", f->esp, fault_addr, (unsigned)f->esp - (unsigned)fault_addr);
-    // printf("page stack stuff %p\n", (PHYS_BASE) - PGSIZE);
-    // printf("(unsigned)fault_addr - (unsigned)f->esp %d\n", (unsigned)thread_current()->esp - (unsigned)fault_addr);
       uint8_t *kpage = get_frame(((uint8_t *) thread_current()->esp) - PGSIZE);
       bool success = install_page (((uint8_t *) thread_current()->esp) - PGSIZE, kpage, true);
       dont_kill = success;
@@ -249,10 +223,6 @@ page_fault (struct intr_frame *f)
       thread_current()->esp -= PGSIZE;
   }
   else if (!dont_kill){
-    //ASSERT(0==1);
-    //printf("fault address: %p\n", fault_addr);
-    //test_frame_table(383);
-    //printf("execption.c\n");
     exit(-1);
   }
 }

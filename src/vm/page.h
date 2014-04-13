@@ -23,17 +23,19 @@
 #include "devices/block.h"
 
 struct supp_page {
+  //Information necessary to load page into physical memory
   struct file *file;
   off_t ofs;
   uint8_t *upage;
   uint32_t read_bytes;
   uint32_t zero_bytes;
-  block_sector_t sector;
-  bool writable;
-  bool present;
-  bool is_stack;
 
-  struct list_elem suppelem;
+  block_sector_t sector;			// The first sector in the swap block to which this page's info is written
+  bool writable;				// If page is writable
+  bool present;					// If page is present in physical memory
+  bool is_stack;				// If page is a stack page
+
+  struct list_elem suppelem;			// List element for supplemental page table
 };
 
 /* Prototypes */

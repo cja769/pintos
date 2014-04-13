@@ -104,7 +104,6 @@ thread_init (void)
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
-  //int count = 0;
   replace_count = 0;
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -114,11 +113,6 @@ thread_init (void)
   initial_thread->vm_lock = &vm_lock; // Initialize the initial_thread's vm_lock
   initial_thread->holds_vm_lock = false;
   initial_thread->tid = allocate_tid ();
-  //initial_thread->replace_count = &count;
-
-  //*******************************************//
-  // frame_table_init();      // initializes our frame table
-  //*******************************************//
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -292,6 +286,7 @@ thread_name (void)
   return thread_current ()->name;
 }
 
+/* Returns initial thread */
 struct thread *
 get_initial_thread(void)
 {

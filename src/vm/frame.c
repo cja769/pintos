@@ -7,11 +7,11 @@
 #include "threads/thread.h"
 #include "userprog/syscall.h"
 
-// static struct frame_table *ftb;						// Stores the one and only frame table
 int free_frames;				// The max number of frames in the frame table
 
-/* Initialize this file */
+/* Initialize the frame table, to be used for all processes */
 void frame_table_init () {
+        //Samantha drove this method
 	// Initially set all members of frame table to null char
 	int i = 0;
 	uint32_t* begin_frame;
@@ -29,26 +29,22 @@ void frame_table_init () {
 
 }
 
+
+/* Prints out contents of frame table for debugging purposes - not currently used */
 void test_frame_table(int max){
+        //Dustin drove this method
 	int i;
-	// int j;
 	for(i = 0; i < max; i++){
 		printf("frames[%d].occupier = %p,	 (frames[%d].physical) = %p,    frames[%d].t->name = %s\n",i,frames[i].occupier,
-			i, (frames[i].physical), i, frames[i].t->name); // pagedir_is_dirty(frames[i].t->pagedir,frames[i].occupier));
-		// for(j = 0; j < 128; j++)
-		// 	printf("Address %p = %p\n",(frames[i].physical)+(4*j), *((frames[i].physical)+(4*j)));
-		// printf("\n");
+			i, (frames[i].physical), i, frames[i].t->name);
 	}
 }
-// struct frame * frame_create () {
-// 	struct frame *f = (struct frame*)malloc ( sizeof (struct frame));
-// 	list_push_back (&(ftb->frames), &(f->frame_elem));
-// 	return f;
-// }
 
+
+/* Frees a frame from physical memory */
 bool return_frame (uint32_t *addr) {
-	// Give the frame back!
-	// printf("in return_frame\n");
+        //Dustin drove this method
+        //Loops through frame table to find frame that matches the given address, then clears that frame
 	int i;
 	for(i = 0; i < NUM_FRAMES; i++) {
 		if(frames[i].occupier == addr){
@@ -61,11 +57,14 @@ bool return_frame (uint32_t *addr) {
 	return false;
 }
 
+/* Frees a frame from physical memory, used when freeing resources when a thread dies */
 bool return_frame_by_tid (tid_t tid){
+        //Calvin and Jason drove this method
 	bool found = false;
 	int i;
 	struct thread *thread;
 	uint8_t *up;
+	//Loops through frame table to find frame whose thread matches the given thread, clears that frame
 	for(i = 0; i < NUM_FRAMES; i++) {
 		if(frames[i].t->tid == tid){
 			up = frames[i].occupier;
@@ -81,64 +80,60 @@ bool return_frame_by_tid (tid_t tid){
 	return found;
 }
 
-bool frame_evict () {
-	//printf("in frame evict\n");
-	//int* count = t->replace_count;
-	//int cnt = *count;
-	// lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
-	// thread_current ()->holds_vm_lock = true;
-	struct thread *t;
-	uint8_t *upage;
-	struct frame replace_frame;
-	struct supp_page * p;
-	bool go = true;
-	bool wrote_to_swap = false;
-	bool dirty;
-	while(go){
-		replace_frame = frames[replace_count];
-		t = replace_frame.t;
-		upage = replace_frame.occupier;
-		p = search_supp_table(upage, t);
-		// 	ASSERT(!(p->is_stack))
-		// //else if ((p->is_stack))
-		// //	ass_count++;
-		if(p != NULL){
-			dirty = pagedir_is_dirty(t->pagedir, upage);
-			if(dirty){
-				wrote_to_swap = write_to_swap(upage, p);
-			}
-			if(!dirty || wrote_to_swap){
-				pagedir_clear_page (t->pagedir, upage);
-				p->present = false;
-				go = false;
-			}
-		else
-			ASSERT ( 0 == 1);
-		}
-		replace_count++;
-		replace_count = replace_count%NUM_FRAMES;
-	}
-	//*count = cnt;
-	//printf("replace_count = %d\n",replace_count); 
-	return return_frame(upage);
+/* Evicts a frame once memory is full following a FIFO replacement policy 
+   Also writes to swap if page in frame has been altered (is dirty) */
+bool frame_evict () 
+    //Calvin, Jason, and Samantha drove this method	
+    struct thread *t;
+    uint8_t *upage;
+    uint8_t *kpage;
+    struct frame replace_frame;
+    struct supp_page * p;
+    bool go = true;
+    bool wrote_to_swap = false;
+    bool dirty;
+    //Find next frame to evict, will go through multiple frames if first victim is dirty and could not be written to swap
+    while(go){
+        replace_frame = frames[replace_count] //replace_count is the index of the next frame to evict
+        t = replace_frame.t;
+        upage = replace_frame.occupier;
+        kpage = replace_frame.physical;
+        p = search_supp_table(upage, t);
+        if(p != NULL){ //Page is in supplemental page table
+            dirty = pagedir_is_dirty(t->pagedir, upage);
+            if(dirty){ //Page has been altered and needs to be written to swap
+                wrote_to_swap = write_to_swap(kpage, p); 
+            }
+            if(!dirty || wrote_to_swap){ //Page has not been altered or has been successfully written to swap
+		//Can just clear page
+                pagedir_clear_page (t->pagedir, upage);
+                p->present = false;
+                go = false;
+            }
+        }
+        replace_count++;
+        replace_count = replace_count%NUM_FRAMES; //To wrap around frame table of replace_count becomes too large
+    }
+    return return_frame(upage);
 }
-
 
 /* Returns a pointer to a free frame */
 uint32_t * get_frame (uint32_t *occu) {
+        //Jason drove this method
 	uint32_t* temp_frame = NULL;
 	int i;
 	bool had_lock = thread_current()->holds_vm_lock;
 	if(!had_lock) {
 		lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
-  	thread_current ()->holds_vm_lock = true;
-  }
-
-	if(free_frames == 0) {
-		if(!frame_evict()) 
-			exit(-1);
+  		thread_current ()->holds_vm_lock = true;
 	}
-	for(i = 0; i < NUM_FRAMES; i++) {
+
+	if(free_frames == 0) { //Physical memory is full
+		if(!frame_evict()) //Evicts frame to later be filled 
+			exit(-1); //Exit if cannot evict for some reason
+	}
+	//Loop through frame table to find index of a free frame
+	for(i = 0; i < NUM_FRAMES; i++) { 
 		if(frames[i].occupier == NULL){
 			free_frames--;
 			temp_frame = frames[i].physical;

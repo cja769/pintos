@@ -2,16 +2,16 @@
 #include "lib/kernel/list.h"
 #include "vm/page.h"
 
-static struct block *swap_block;
+static struct block *swap_block;			//Entire swap block
 
-struct list free_sector_list;
+struct list free_sector_list;				//List of free sectors in swap block
 
-static int swap_size;
+static int swap_size;					//Remaining space in swap block
 
-struct sector_group {
-	block_sector_t start_sector;
+struct sector_group {					//Wraps up a page-sized group of sectors
+	block_sector_t start_sector;			//First sector in group to which a page can be written
 
-	struct list_elem sectorelem;
+	struct list_elem sectorelem;			//List element for free list of sectors
 };
 
 /* Prototypes */

@@ -47,7 +47,6 @@ int
 get_arg (int *esp, bool is_pointer)
 {
   struct supp_page *p = NULL;
-  //printf("in get_arg\n");
   int fix_esp = esp;
   fix_esp = fix_esp & 0xfffff000;
   int * fixed_esp = (int*) fix_esp;
@@ -191,17 +190,6 @@ int read (int fd, void *buffer, unsigned size) {
   bool worked = true;
   void* temp_buffer = buffer;
   //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
-  //  while(temp_size > PGSIZE && worked) {
-  //   read(fd, temp_buffer, PGSIZE);
-  //   worked = call_page_fault(temp_buffer);
-  //   temp_buffer+= PGSIZE;
-  //   temp_size -= PGSIZE;
-  //   //printf("worked = %d, temp_buffer = %p, and temp_size = %d\n",worked,temp_buffer,temp_size);
-  // }
-  // if(temp_size > 0 && worked){
-  //   worked = call_page_fault(temp_buffer);
-  //   //printf("worked = %d, temp_buffer = %p, and temp_size = %d\n",worked,temp_buffer,temp_size);
-  // }
   if (fd >= 130 || fd < 0 || fd == 1)
   {
       exit(-1);
