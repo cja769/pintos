@@ -82,7 +82,7 @@ bool return_frame_by_tid (tid_t tid){
 
 /* Evicts a frame once memory is full following a FIFO replacement policy 
    Also writes to swap if page in frame has been altered (is dirty) */
-bool frame_evict () 
+bool frame_evict () { 
     //Calvin, Jason, and Samantha drove this method	
     struct thread *t;
     uint8_t *upage;
@@ -94,7 +94,7 @@ bool frame_evict ()
     bool dirty;
     //Find next frame to evict, will go through multiple frames if first victim is dirty and could not be written to swap
     while(go){
-        replace_frame = frames[replace_count] //replace_count is the index of the next frame to evict
+        replace_frame = frames[replace_count]; //replace_count is the index of the next frame to evict
         t = replace_frame.t;
         upage = replace_frame.occupier;
         kpage = replace_frame.physical;

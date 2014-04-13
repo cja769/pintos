@@ -130,7 +130,7 @@ int call_page_fault (void * fault_addr){
           if(p->sector == (unsigned int) -1){ //page has not been written to swap before
             dont_kill = load_segment(p->file, p->ofs, p->upage, p->read_bytes, p->zero_bytes, p->writable);
           }
-          else
+          else {
             bool had_lock = thread_current()->holds_vm_lock;
             if(!had_lock){
               lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
