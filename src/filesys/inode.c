@@ -12,17 +12,17 @@
 
 /* On-disk inode index_block.
    Must be exactly BLOCK_SECTOR_SIZE bytes long. */
-struct inode_index_block
+struct inode_indirect_block
   {
     block_sector_t blocks[128];         /* Array of block_sectors. */
   };
 
 /* On-disk inode index_blocks.
    Must be exactly BLOCK_SECTOR_SIZE bytes long. */
-struct inode_index_blocks
+struct inode_doubly_indirect_block
   {
-    struct inode_index_block *ibs[128];          /* Array of index blocks of 
-                                           block_sectors */
+    struct inode_indirect_block *ibs[128];          /* Array of index blocks of 
+                                                      block_sectors */
   };
 
 /* On-disk inode.
@@ -30,9 +30,9 @@ struct inode_index_blocks
 struct inode_disk
   {
     block_sector_t start[10];           /* First data sector. */
-    struct inode_index_block *ib_0;      /* First level of indirection, 
+    struct inode_indirect_block *ib_0;      /* First level of indirection, 
                                            to index block */
-    struct inode_index_blocks *ib_1;     /* Second level of indirection, 
+    struct inode_doubly_indirect_block *ib_1;     /* Second level of indirection, 
                                            to index block of index blocks */
     off_t length;                       /* File size in bytes. */
     unsigned magic;                     /* Magic number. */
@@ -83,17 +83,25 @@ get_sector (const struct inode_disk *inode_disk, off_t pos)
     //printf("pos / BLOCK_SECTOR_SIZE %d\n", pos / BLOCK_SECTOR_SIZE);
     if (pos / BLOCK_SECTOR_SIZE <= 10)
     {
+      printf("direct block\n");
       //printf("Small file\n");
       /* Our pos is within the first 10 direct blocks */
       return inode_disk->start[pos / BLOCK_SECTOR_SIZE];
     }
     else if (pos /BLOCK_SECTOR_SIZE <= 138)
     {
+      printf("indirect block\n");
       /* Our pos is within the first level of indirection */
-      return inode_disk->ib_0->blocks[(pos / BLOCK_SECTOR_SIZE) - 10];
+      struct inode_indirect_block *blah = inode_disk->ib_0;
+      printf("After getting to indirect block\n");
+      int index = pos / BLOCK_SECTOR_SIZE - 11;
+      printf("Index in array is %d, pos is: %d, BLOCK_SECTOR_SIZE is: %d\n", index, pos, BLOCK_SECTOR_SIZE);
+      printf("Accessing index in array: %d\n", &blah->blocks[0]);
+      return &(inode_disk->ib_0->blocks[(pos / BLOCK_SECTOR_SIZE) - 11]);  //Changed subtract from 10 to 11, otherwise starts at blocks[1]
     }
     else
     {
+      printf("doubly indirect block\n");
       /* Our pos is within the second level of indirection... uhh... */
       return inode_disk->ib_1->ibs[0]->blocks[0]; // TODO
     }
@@ -162,12 +170,12 @@ inode_create (block_sector_t sector, off_t length)
               size_t i;
               size_t j;
               
-              //printf("length: %d\n", disk_inode->length);
+              printf("length: %d, sectors: %d\n", disk_inode->length, sectors);
 
               /* j is the first byte in each block_sector */
               for (i = 0, j = 1; i < sectors; i++, j += BLOCK_SECTOR_SIZE) 
               {
-                //printf ("Before block_write i:%d, j:%d, byte to sector: %d\n", i, j, get_sector(disk_inode, j));
+                printf ("Before block_write i:%d, j:%d, byte to sector: %d\n", i, j, get_sector(disk_inode, j));
                 block_write (fs_device, get_sector(disk_inode, j), zeros);
                 //block_write (fs_device, disk_inode->start + i, zeros);
               }
@@ -176,6 +184,7 @@ inode_create (block_sector_t sector, off_t length)
         } 
       free (disk_inode);
     }
+    printf("out of inode_create\n");
   return success;
 }
 
@@ -332,6 +341,7 @@ off_t
 inode_write_at (struct inode *inode, const void *buffer_, off_t size,
                 off_t offset) 
 {
+  printf("in inode_write_at\n");
   const uint8_t *buffer = buffer_;
   off_t bytes_written = 0;
   uint8_t *bounce = NULL;
