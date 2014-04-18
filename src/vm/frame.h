@@ -9,7 +9,7 @@ struct frame {
 	uint32_t *occupier;     				// The address of the occupying page      
 	uint32_t *physical;  					// The address of the frame page  
 	struct thread *t;					// The thread that has this frame
-	int * replace_count;					// A pointer to the index of the next frame to evict
+	int * replace_count;					// A pointer to the index of the next frame to evict random comment delete later
 };
 
 struct frame frames[NUM_FRAMES]; 				//Frame table
