@@ -27,9 +27,6 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
-static int replace_count; //Index of next frame to evict, needs to be used globally
-
-
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -120,19 +117,8 @@ struct thread
     /* Lock for io synchronization */
     struct lock *io_lock;
 
-    /* Lock for vm synchronization */
-    struct lock *vm_lock;
-    bool holds_vm_lock;
-
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-
-    /* A list for supplemental page table */
-    struct list supp_page_table;
-
-    //For stack growth in case esp in frame is wrong
-    uint8_t *esp;
-
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -165,7 +151,6 @@ void thread_unblock (struct thread *);
 struct thread *thread_current (void);
 tid_t thread_tid (void);
 const char *thread_name (void);
-struct thread *get_initial_thread(void);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);

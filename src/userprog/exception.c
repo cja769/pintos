@@ -1,14 +1,11 @@
 #include "userprog/exception.h"
+#include <inttypes.h>
 #include <stdio.h>
 #include "userprog/gdt.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/syscall.h"
-#include "userprog/process.h"
-#include "vm/frame.h"
-//#include "vm/page.h"
-#include "threads/pte.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -113,56 +110,6 @@ kill (struct intr_frame *f)
     }
 }
 
-/* call_page_fault - Brings faulting page into physical memory if possible 
-   Brings page from swap if it resides there */
-
-int call_page_fault (void * fault_addr){
-
-  //Calvin and Jason drove this method
-
-  struct list_elem *e;
-  bool dont_kill = false; //To be passed along to page_fault() if fault is appropriately dealt with
-  for (e = list_begin (&thread_current()->supp_page_table); e != list_end(&thread_current()->supp_page_table) && !dont_kill; e = list_next(e))
-    {
-        struct supp_page *p = list_entry (e, struct supp_page, suppelem);
-        if (pt_no(fault_addr) == pt_no(p->upage) && p->present == false) { //Page matches fault address and is not present
-
-          if(p->sector == (unsigned int) -1){ //page has not been written to swap before
-            dont_kill = load_segment(p->file, p->ofs, p->upage, p->read_bytes, p->zero_bytes, p->writable);
-          }
-          else {
-            bool had_lock = thread_current()->holds_vm_lock;
-            if(!had_lock){
-              lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
-              thread_current ()->holds_vm_lock = true;
-            }
-            uint8_t * start = read_from_swap(p);
-            if(!had_lock){
-              lock_release (thread_current ()->vm_lock); // Release the vm_lock
-              thread_current ()->holds_vm_lock = false;
-            }
-            if(start != NULL){ //start should never be NULL
-              uint8_t *kpage = get_frame(p->upage);
-              memcpy(kpage,start,PGSIZE);
-              palloc_free_page((void*)start);
-              dont_kill = install_page(p->upage,kpage,p->writable);
-              if(dont_kill)
-                pagedir_set_dirty (thread_current()->pagedir,p->upage,true);
-
-            }
-            else{
-              printf("start is null for some reason\n");
-            }
-          }
-
-          if(dont_kill){
-            p->present = true;
-          }
-        }
-    }
-    return dont_kill;
-}
-
 /* Page fault handler.  This is a skeleton that must be filled in
    to implement virtual memory.  Some solutions to project 2 may
    also require modifying this code.
@@ -208,26 +155,16 @@ page_fault (struct intr_frame *f)
   if (user && (!is_user_vaddr(fault_addr) || fault_addr == NULL))
     exit(-1);
 
+  /* To implement virtual memory, delete the rest of the function
+     body, and replace it with code that brings in the page to
+     which fault_addr refers. */
+  printf ("Page fault at %p: %s error %s page in %s context.\n",
+          fault_addr,
+          not_present ? "not present" : "rights violation",
+          write ? "writing" : "reading",
+          user ? "user" : "kernel");
 
+  printf("There is no crying in Pintos!\n");
 
-  /* Samantha drove here */
-  //Used to rule out reasons for page fault. Set to true if fault can be dealt with so that the process is not killed
-  bool dont_kill = call_page_fault(fault_addr);   
-
-  //Stack growth heuristic: if faulting address is within 32 bytes of esp, create a new page for stack growth
-  if ((unsigned)fault_addr - (unsigned)f->esp <= 32 || (unsigned)f->esp - (unsigned)fault_addr <= 32) {
-      uint8_t *kpage = get_frame(((uint8_t *) thread_current()->esp) - PGSIZE);
-      bool success = install_page (((uint8_t *) thread_current()->esp) - PGSIZE, kpage, true);
-      dont_kill = success;
-      load_supp_page(NULL, 0, ((uint8_t *) thread_current()->esp), 0, 0, true, true);
-      thread_current()->esp -= PGSIZE;
-  }
-  else if (!dont_kill){
-    exit(-1);
-  }
+  kill (f);
 }
-
-
-
-
-

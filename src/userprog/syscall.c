@@ -14,8 +14,6 @@
 #include "userprog/pagedir.h"
 #include <string.h>
 #include <stdarg.h> 
-#include "vm/page.h"
-#include "threads/pte.h" 
 
 /* Protoypes */
 void file_index_increment ();
@@ -46,22 +44,10 @@ void file_index_increment () {
 int
 get_arg (int *esp, bool is_pointer)
 {
-  struct supp_page *p = NULL;
-  int fix_esp = esp;
-  fix_esp = fix_esp & 0xfffff000;
-  int * fixed_esp = (int*) fix_esp;
-  bool exit_bool = true;
   // Calvin drove this method
   if (is_pointer) {
-    if(is_user_vaddr((int *)*esp) && pagedir_get_page(thread_current()->pagedir, (int *)*esp) == NULL){ //If not found in pagedir (not in frame table)
-      p = search_supp_table(fixed_esp,thread_current());
-      exit_bool = p == NULL ? true : false;
-    }
-    else
-      exit_bool = false;
-    if ((int *)*esp == NULL || !is_user_vaddr((int *)*esp) || exit_bool) {
+    if ((int *)*esp == NULL || !is_user_vaddr((int *)*esp) || pagedir_get_page(thread_current()->pagedir, (int *)*esp) == NULL)
       exit(-1);
-    }
   }
   return *esp;
 }
@@ -85,7 +71,7 @@ void exit (int status) {
 
   /* Loop through the parents list of children to find the copy that matches this thread... */
   struct list_elem *e;
-  struct thread *copy = NULL;
+  struct thread *copy;
 
   for (e = list_begin (&t->parent->children); e != list_end (&t->parent->children);
        e = list_next (e))
@@ -99,19 +85,16 @@ void exit (int status) {
       break;
     }
   }
+
   char *saveptr;
   printf ("%s: exit(%d)\n", strtok_r(copy->name, " ", &saveptr), copy->exit_status); 
 
   // When a process exits, sema_up to allow its parent to return
   sema_up(&copy->mutex); 
 
-
   /* Close and allow write to files inode for rox */
   file_allow_write(t->exe);
   file_close(t->exe); 
-  return_frame_by_tid (t->tid);
-  //if(t->holds_vm_lock)
-    //lock_release(t->vm_lock);
   thread_exit();
 }
 
@@ -186,9 +169,6 @@ int read (int fd, void *buffer, unsigned size) {
   // Calvin and Samantha took turns driving this system_call
   struct thread *t = thread_current();
   int result;
-  int temp_size = size;
-  bool worked = true;
-  void* temp_buffer = buffer;
   //Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
   if (fd >= 130 || fd < 0 || fd == 1)
   {
@@ -202,11 +182,9 @@ int read (int fd, void *buffer, unsigned size) {
       exit(-1);
   }
     /* Acquire a lock to read a file in file_sys */
-    lock_acquire(t->vm_lock);
-    thread_current ()->holds_vm_lock = true;
+    lock_acquire(t->io_lock);
     result = file_read (t->file_list[fd], buffer, size);
-    lock_release (t->vm_lock);
-    thread_current ()->holds_vm_lock = false;
+    lock_release (t->io_lock);
     return result;
   }
   else if(fd == 0){
@@ -217,19 +195,15 @@ int read (int fd, void *buffer, unsigned size) {
       memcpy(&temp, buffer_, sizeof(char));
     }
     /* Acquire a lock to read a file in file_sys */
-    lock_acquire(t->vm_lock);
-    thread_current ()->holds_vm_lock = true;
+    lock_acquire(t->io_lock);
     result = file_read (t->file_list[fd], buffer, size);
-    lock_release (t->vm_lock);
-    thread_current ()->holds_vm_lock = false;
+    lock_release (t->io_lock);
     return result;
   }
     /* Acquire a lock to read a file in file_sys */
-    lock_acquire(t->vm_lock);
-    thread_current ()->holds_vm_lock = true;;
+    lock_acquire(t->io_lock);
     result = file_read (t->file_list[fd], buffer, size);
-    lock_release (t->vm_lock);
-    thread_current ()->holds_vm_lock = false;
+    lock_release (t->io_lock);
     return result;
 }
 
@@ -251,11 +225,9 @@ int write (int fd, const void *buffer, unsigned size)
       exit(-1);
   }
     /* Acquire a lock to write to file_sys */
-    lock_acquire(t->vm_lock);
-    thread_current ()->holds_vm_lock = true;
+    lock_acquire(t->io_lock);
     result = file_write(t->file_list[fd], buffer, size);
-    lock_release (t->vm_lock);
-    thread_current ()->holds_vm_lock = false;
+    lock_release (t->io_lock);
     return result;
   }
 
@@ -277,10 +249,7 @@ void seek (int fd, unsigned position) {
   if (t->file_list[fd] == -1)
       exit(-1);
   struct file *file = t->file_list[fd];
-  //lock_acquire(t->vm_lock);
   file_seek (file, position);
-  //lock_release (t->vm_lock);
-
 }
 
 unsigned tell (int fd) {
@@ -300,16 +269,13 @@ unsigned tell (int fd) {
 void close (int fd) {
   // Calvin and Samantha took turns driving this system_call
   // Checking to see if fd is in the valid range (130 because we are shifting to account for stdin/out)
-  if (fd >= 130 || fd < 0){
+  if (fd >= 130 || fd < 0)
       exit(-1);
-  } 
   struct thread *t = thread_current();
-  if (fd >= 2){
+  if (fd >= 2)
     fd -=2;
-  }
-  if (t->file_list[fd] == -1){
+  if (t->file_list[fd] == -1)
       exit(-1);
-  }
   if (t->file_list[fd] != -1) {
     struct file * file = t->file_list[fd];
     file_close (file);
@@ -333,6 +299,7 @@ syscall_handler (struct intr_frame *f)
 
   /* This is OFTEN used for debugging and tracing the system calls pintos makes */
   // printf("Syscall number: %d\n", syscall_number);
+
   switch (syscall_number) {
     case 0: { //HALT
       halt();

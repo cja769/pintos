@@ -17,10 +17,6 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
-//#include "vm/page.h"
-#include "vm/frame.h"
-#include "threads/malloc.h"
-
 
 static thread_func start_process NO_RETURN;
 static bool load (struct args *file_name, void (**eip) (void), void **esp);
@@ -69,7 +65,6 @@ process_execute (const char *file_name)
   }  
 
   /* Create a new thread to execute FILE_NAME. */
-  // printf("filen_name before create = %s\n", file_name);
   tid = thread_create (file_name, PRI_DEFAULT, start_process, arguments);
   /* The parent thread running this method will wait for exec to finish
    If the child process failed to load, this method returns -1 */
@@ -81,6 +76,7 @@ process_execute (const char *file_name)
       if (copy->tid == tid && copy->exit_status == -1)
         tid = -1;
     }
+  //printf("%d\n", tid);
   if (tid == TID_ERROR) {
     palloc_free_page (fn_copy); 
   }
@@ -285,8 +281,9 @@ struct Elf32_Phdr
 
 static bool setup_stack (void **esp, struct args *file_name);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
-static bool load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
-              uint32_t read_bytes, uint32_t zero_bytes, bool writable);
+static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
+                          uint32_t read_bytes, uint32_t zero_bytes,
+                          bool writable);
 
 /* Loads an ELF executable from FILE_NAME into the current thread.
    Stores the executable's entry point into *EIP
@@ -297,6 +294,7 @@ load (struct args *file_name, void (**eip) (void), void **esp)
 {
   // Dustin drove this method
   char *file_ = *file_name->argv;
+
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
   struct file *file = NULL;
@@ -309,9 +307,6 @@ load (struct args *file_name, void (**eip) (void), void **esp)
   if (t->pagedir == NULL) 
     goto done;
   process_activate ();
-
-  /* Initialize the supplemental page table */
-  supp_page_table_init ();
 
   /* Open executable file. */
   file = filesys_open (file_);
@@ -384,7 +379,7 @@ load (struct args *file_name, void (**eip) (void), void **esp)
                   read_bytes = 0;
                   zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
                 }
-              if (!load_supp_segment (file, file_page, (void *) mem_page,
+              if (!load_segment (file, file_page, (void *) mem_page,
                                  read_bytes, zero_bytes, writable))
                 goto done;
             }
@@ -410,6 +405,9 @@ load (struct args *file_name, void (**eip) (void), void **esp)
   return success;
 }
 
+/* load() helpers. */
+
+static bool install_page (void *upage, void *kpage, bool writable);
 
 /* Checks whether PHDR describes a valid, loadable segment in
    FILE and returns true if so, false otherwise. */
@@ -470,18 +468,16 @@ validate_segment (const struct Elf32_Phdr *phdr, struct file *file)
 
    Return true if successful, false if a memory allocation error
    or disk read error occurs. */
-bool
+static bool
 load_segment (struct file *file, off_t ofs, uint8_t *upage,
               uint32_t read_bytes, uint32_t zero_bytes, bool writable) 
 {
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
-  bool file_null = file == NULL;
-  if(!file_null){
-    file_seek (file, ofs);
-  }
-  while ((read_bytes > 0 || zero_bytes > 0) && !file_null) 
+
+  file_seek (file, ofs);
+  while (read_bytes > 0 || zero_bytes > 0) 
     {
       /* Calculate how to fill this page.
          We will read PAGE_READ_BYTES bytes from FILE
@@ -490,69 +486,25 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
       /* Get a page of memory. */
-      uint8_t *kpage = get_frame(upage); //Our method, gets frame of physical memory
-      if (kpage == NULL){
-       return false;
-      }
+      uint8_t *kpage = palloc_get_page (PAL_USER);
+      if (kpage == NULL)
+        return false;
+
       /* Load this page. */
-      /* Jason and Calvin drove here for lock stuff */
-      bool had_lock = thread_current()->holds_vm_lock;
-      if(!had_lock){
-        lock_acquire (thread_current ()->vm_lock); // Acquire the vm_lock
-        thread_current ()->holds_vm_lock = true;
-      }
       if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
         {
-          if(!had_lock){
-            lock_release (thread_current ()->vm_lock); // Release the vm_lock
-            thread_current ()->holds_vm_lock = false;
-          }
-
-          return_frame (upage); //Invalid read, must return frame of phys memory
+          palloc_free_page (kpage);
           return false; 
         }
-      if(!had_lock){
-        lock_release (thread_current ()->vm_lock); // Release the vm_lock
-        thread_current ()->holds_vm_lock = false;
-      }
       memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
       /* Add the page to the process's address space. */
       if (!install_page (upage, kpage, writable)) 
         {
-          return_frame (upage); //Our method, returns frame that was acquired earlier
+          palloc_free_page (kpage);
           return false; 
         }
 
-      /* Advance. */
-      read_bytes -= page_read_bytes;
-      zero_bytes -= page_zero_bytes;
-      upage += PGSIZE;
-    }
-  return true;
-}
-
-
-/* load_supp_segment - Loads information about a page into the supplemental page table
-   that will be used later to load the page into physical memory and the page directory */
-static bool
-load_supp_segment (struct file *file, off_t ofs, uint8_t *upage,
-              uint32_t read_bytes, uint32_t zero_bytes, bool writable) 
-{
-  //Dustin and Samantha drove this method
-  ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
-  ASSERT (pg_ofs (upage) == 0);
-  ASSERT (ofs % PGSIZE == 0);
-  off_t new_ofs = ofs;
-  while (read_bytes > 0 || zero_bytes > 0) 
-    {
-      /* Calculate how to fill this page.
-         We will read PAGE_READ_BYTES bytes from FILE
-         and zero the final PAGE_ZERO_BYTES bytes. */
-      size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
-      size_t page_zero_bytes = PGSIZE - page_read_bytes;
-      load_supp_page(file,new_ofs, (void *) upage, page_read_bytes, page_zero_bytes, writable, false); 
-      new_ofs += (page_read_bytes + page_zero_bytes);
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
@@ -573,18 +525,14 @@ setup_stack (void **esp, struct args *file_name)
   char *myesp;
   int addr[file_name->argc]; /* To store the address of each argument we push on the stack */
   int addr_argv; /* To store the address of the first pointer on the stack */
-  uint8_t *upage = ((uint8_t *) PHYS_BASE) - PGSIZE;
-  kpage = get_frame(upage);
+
+  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
-      success = install_page (upage, kpage, true);
+      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
       {
-        load_supp_page(NULL, 0, upage, 0, 0, true, true);
-        // test_supp_page_table();
         *esp = PHYS_BASE;
-        thread_current()->esp = (uint8_t *)PHYS_BASE - PGSIZE; /*For stack growth - need
-          bottom of stack page to create new page*/
         myesp = (char*)*esp; // Modify a copy of myesp for easier arithmetic, and set esp at the end
         /* Pushes command line onto the stack from right to left */
         for(i = file_name->argc-1; i >= 0; i--)
@@ -617,7 +565,7 @@ setup_stack (void **esp, struct args *file_name)
         *esp = myesp;
       }
       else
-        return_frame (((uint8_t *) PHYS_BASE) - PGSIZE);
+        palloc_free_page (kpage);
     }
   return success;
 }
@@ -631,7 +579,7 @@ setup_stack (void **esp, struct args *file_name)
    with palloc_get_page().
    Returns true on success, false if UPAGE is already mapped or
    if memory allocation fails. */
-bool
+static bool
 install_page (void *upage, void *kpage, bool writable)
 {
   struct thread *t = thread_current ();

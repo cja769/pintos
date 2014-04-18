@@ -22,7 +22,6 @@
 #include "threads/palloc.h"
 #include "threads/pte.h"
 #include "threads/thread.h"
-#include "vm/frame.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "userprog/exception.h"
@@ -127,11 +126,6 @@ main (void)
   locate_block_devices ();
   filesys_init (format_filesys);
 #endif
-
-  //*******************************************//
-  frame_table_init();      // initializes our frame table
-  swap_init();             // initialize swap table
-  //*******************************************//
 
   printf ("Boot complete.\n");
   
