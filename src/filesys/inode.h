@@ -4,8 +4,52 @@
 #include <stdbool.h>
 #include "filesys/off_t.h"
 #include "devices/block.h"
+#include <list.h>
+
 
 struct bitmap;
+
+/* On-disk inode index_block.
+   Must be exactly BLOCK_SECTOR_SIZE bytes long. */
+struct inode_indirect_block
+  {
+    block_sector_t blocks[128];         /* Array of block_sectors. */
+  };
+
+/* On-disk inode index_blocks.
+   Must be exactly BLOCK_SECTOR_SIZE bytes long. */
+struct inode_doubly_indirect_block
+  {
+    struct inode_indirect_block *ibs[128];          /* Array of index blocks of 
+                                                      block_sectors */
+  };
+
+/* On-disk inode.
+   Must be exactly BLOCK_SECTOR_SIZE bytes long. */
+struct inode_disk
+  {
+    block_sector_t start[10];           /* First data sector. */
+    struct inode_indirect_block *ib_0;      /* First level of indirection, 
+                                           to index block */
+    struct inode_doubly_indirect_block *ib_1;     /* Second level of indirection, 
+                                           to index block of index blocks */
+    off_t length;                       /* File size in bytes. */
+    unsigned magic;                     /* Magic number. */
+    uint32_t unused[114];               /* Not used. */
+  };
+
+
+/* In-memory inode. */
+struct inode 
+  {
+    struct list_elem elem;              /* Element in inode list. */
+    block_sector_t sector;              /* Sector number of disk location. */
+    int open_cnt;                       /* Number of openers. */
+    bool removed;                       /* True if deleted, false otherwise. */
+    int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
+    struct inode_disk data;             /* Inode content. */
+  };
+
 
 void inode_init (void);
 bool inode_create (block_sector_t, off_t);

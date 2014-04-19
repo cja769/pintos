@@ -27,6 +27,7 @@ free_map_init (void)
 bool
 free_map_allocate (size_t cnt, block_sector_t *sectorp)
 {
+  //printf("INSIDE FREE_MAP_ALLOCATE sectorp = %p\n",sectorp);
   block_sector_t sector = bitmap_scan_and_flip (free_map, 0, cnt, false);
   if (sector != BITMAP_ERROR
       && free_map_file != NULL
@@ -37,6 +38,7 @@ free_map_allocate (size_t cnt, block_sector_t *sectorp)
     }
   if (sector != BITMAP_ERROR)
     *sectorp = sector;
+  //printf("END OF FREE_MAP_ALLOCATE *sectorp = %d\n", *sectorp);
   return sector != BITMAP_ERROR;
 }
 

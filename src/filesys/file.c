@@ -111,6 +111,9 @@ off_t
 file_write_at (struct file *file, const void *buffer, off_t size,
                off_t file_ofs) 
 {
+  struct inode * i = file->inode;
+  struct inode_disk id = i->data;
+ // printf("file_write_at passing: %d, file: %p\n", id.length, file);
   return inode_write_at (file->inode, buffer, size, file_ofs);
 }
 
