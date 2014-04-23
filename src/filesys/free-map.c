@@ -55,7 +55,9 @@ free_map_release (block_sector_t sector, size_t cnt)
 void
 free_map_open (void) 
 {
-  free_map_file = file_open (inode_open (FREE_MAP_SECTOR));
+  struct inode *inode_open_result = inode_open (FREE_MAP_SECTOR);
+  printf("inode_open_result length: %d, id: %d\n", inode_open_result->data.length, inode_open_result->data.id);
+  free_map_file = file_open (inode_open_result);
   if (free_map_file == NULL)
     PANIC ("can't open free map");
   if (!bitmap_read (free_map, free_map_file))
