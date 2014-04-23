@@ -87,3 +87,8 @@ free_map_create (void)
   if (!bitmap_write (free_map, free_map_file))
     PANIC ("can't write free map");
 }
+
+/* Returns true if the sector is occupied, false otherwise */
+free_map_check_sector (size_t idx) {
+  return bitmap_test (free_map, idx);
+}

@@ -59,8 +59,11 @@ get_ptr_for_sector (struct inode_disk *inode_disk, off_t pos)
       block_read(fs_device, inode_disk->ib0_sector, inode_disk->ib_0);
       //printf("After getting to indirect block\n");
       int index = (pos / BLOCK_SECTOR_SIZE) - 10;
-      printf("Index in array is %d, pos is: %d, BLOCK_SECTOR_SIZE is: %d\n", index, pos, BLOCK_SECTOR_SIZE);
+      printf("index in array is %d, pos is: %d, BLOCK_SECTOR_SIZE is: %d\n", index, pos, BLOCK_SECTOR_SIZE);
       //printf("Accessing index in array: %d\n", blah->blocks[1]);
+      if ((inode_disk->ib_0)->blocks[index] == 0 || (inode_disk->ib_0)->blocks[index] < 0 || (inode_disk->ib_0)->blocks[index] > 16384) // FIX THIS LATER, Maybe revisit zeroing things
+        free_map_allocate(1, &((inode_disk->ib_0)->blocks[index]));  // Allocate sector for a direct block in the first indirect block if it doesn't exist
+      printf("sector at index in indirect block: %d\n", (inode_disk->ib_0)->blocks[index]);
       return &((inode_disk->ib_0)->blocks[index]); 
     }
     else if (pos / BLOCK_SECTOR_SIZE < 16522 )
@@ -186,7 +189,7 @@ inode_create (block_sector_t sector, off_t length)
       }
       // PANIC("Out of inode_create!\n");
       // printf("out of inode_create, length is: %u, success is: %d\n", disk_inode->length, success);
-      free (disk_inode);
+      free (disk_inode); 
     }
   return success;
 }
@@ -365,7 +368,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
       /* Sector to write, starting byte offset within sector. */
      // printf("inode_write_at length: %d, magic: %d\n", inode->data.length, inode->data.magic);
       block_sector_t sector_idx = byte_to_sector_new (inode, offset); // Changed from old
-      // printf("sector index: %d\n", sector_idx);
+      printf("IN INODE_WRITE_AT sector_idx: %d, size: %d\n", sector_idx, size);
       int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
       /* Bytes left in inode, bytes left in sector, lesser of the two. */
