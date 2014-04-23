@@ -6,9 +6,6 @@
 #include "devices/block.h"
 #include <list.h>
 
-
-struct bitmap;
-
 /* On-disk inode index_block.
    Must be exactly BLOCK_SECTOR_SIZE bytes long. */
 struct inode_indirect_block
@@ -28,14 +25,17 @@ struct inode_doubly_indirect_block
    Must be exactly BLOCK_SECTOR_SIZE bytes long. */
 struct inode_disk
   {
-    block_sector_t start[10];           /* First data sector. */
-    struct inode_indirect_block *ib_0;      /* First level of indirection, 
-                                           to index block */
-    struct inode_doubly_indirect_block *ib_1;     /* Second level of indirection, 
-                                           to index block of index blocks */
-    off_t length;                       /* File size in bytes. */
-    unsigned magic;                     /* Magic number. */
-    uint32_t unused[114];               /* Not used. */
+    block_sector_t start[10];                    /* First data sector. */
+    block_sector_t ib0_sector;                   /* First level of indirection, 
+                                                   to index block */
+    struct inode_indirect_block * ib_0;
+    block_sector_t ib1_sector;                    /* Second level of indirection, 
+                                                    to index block of index blocks */
+    struct inode_doubly_indirect_block * ib_1;
+    off_t length;                                  /* File size in bytes. */
+    unsigned magic;                                /* Magic number. */
+    uint32_t unused[111];                          /* Not used. */
+    uint32_t id;
   };
 
 
