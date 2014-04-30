@@ -69,7 +69,7 @@ file_get_inode (struct file *file)
 off_t
 file_read (struct file *file, void *buffer, off_t size) 
 {
-  printf("\nIn file_read\n");
+  // printf("\nIn file_read\n");
   off_t bytes_read = inode_read_at (file->inode, buffer, size, file->pos);
   file->pos += bytes_read;
   return bytes_read;
@@ -83,7 +83,7 @@ file_read (struct file *file, void *buffer, off_t size)
 off_t
 file_read_at (struct file *file, void *buffer, off_t size, off_t file_ofs) 
 {
-  printf("\nIn file_read_at\n");
+  // printf("\nIn file_read_at\n");
   return inode_read_at (file->inode, buffer, size, file_ofs);
 }
 
@@ -97,7 +97,7 @@ file_read_at (struct file *file, void *buffer, off_t size, off_t file_ofs)
 off_t
 file_write (struct file *file, const void *buffer, off_t size) 
 {
-  printf("\nIn file_write\n");
+  // printf("\nIn file_write\n");
   off_t bytes_written = inode_write_at (file->inode, buffer, size, file->pos);
   file->pos += bytes_written;
   return bytes_written;
@@ -114,7 +114,7 @@ off_t
 file_write_at (struct file *file, const void *buffer, off_t size,
                off_t file_ofs) 
 {
-  printf("\nIn file_write_at\n");
+  // printf("\nIn file_write_at\n");
   struct inode * i = file->inode;
   struct inode_disk id = i->data;
  // printf("file_write_at passing: %d, file: %p\n", id.length, file);

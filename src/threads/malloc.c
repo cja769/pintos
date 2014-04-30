@@ -236,7 +236,7 @@ free (void *p)
           lock_acquire (&d->lock);
 
           /* Add block to free list. */
-          printf("In free, p: %p\n", p);
+          //printf("In free, p: %p\n", p);
           list_push_front (&d->free_list, &b->free_elem);
 
           /* If the arena is now entirely unused, free it. */
