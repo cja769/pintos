@@ -171,6 +171,7 @@ inode_create (block_sector_t sector, off_t length)
         sector_ptr = get_ptr_for_sector(disk_inode, j);
         if (free_map_allocate (1, sector_ptr) )
         {
+            block_write(fs_device, disk_inode->ib0_sector, disk_inode->ib_0);
             // printf("i: %d, j: %d\n",i, j);
             // printf("sector number: %d\n", *get_ptr_for_sector(disk_inode, j));
             // block_write (fs_device, sector, disk_inode);

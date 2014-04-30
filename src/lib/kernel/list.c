@@ -170,11 +170,15 @@ list_insert (struct list_elem *before, struct list_elem *elem)
 {
   ASSERT (is_interior (before) || is_tail (before));
   ASSERT (elem != NULL);
-
+  printf("LIST_INSERT AFTER ASSERTS!!!!!!!!\n");
   elem->prev = before->prev;
+  printf("here1\n");
   elem->next = before;
+  printf("here2\n");
   before->prev->next = elem;
+  printf("here3\n");
   before->prev = elem;
+  printf("here4\n");
 }
 
 /* Removes elements FIRST though LAST (exclusive) from their
