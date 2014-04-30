@@ -141,7 +141,9 @@ inode_create (block_sector_t sector, off_t length)
   //printf("original length: %d\n", length);
 
   printf ("Before calloc: %p\n", disk_inode);
-  disk_inode = calloc (1, sizeof disk_inode);
+  printf("\tsizeof disk_inode = %d\n",sizeof disk_inode);
+  printf("\tsizeof *disk_inode = %d\n",sizeof *disk_inode);
+  disk_inode = calloc (1, sizeof *disk_inode);
   printf("\tinode sector = %d\n",sector);
   printf ("After calloc: %p\n", disk_inode);
   if (disk_inode != NULL)

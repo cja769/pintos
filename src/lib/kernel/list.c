@@ -175,6 +175,8 @@ list_insert (struct list_elem *before, struct list_elem *elem)
   printf("here1\n");
   elem->next = before;
   printf("here2\n");
+  struct  list_elem *previous = before->prev;
+  printf("elem = %p, before = %p and previous = %p\n",elem,before,previous);
   before->prev->next = elem;
   printf("here3\n");
   before->prev = elem;
