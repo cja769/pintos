@@ -15,11 +15,11 @@ struct inode_indirect_block
 
 /* On-disk inode index_blocks.
    Must be exactly BLOCK_SECTOR_SIZE bytes long. */
-struct inode_doubly_indirect_block
-  {
-    struct inode_indirect_block *ibs[128];          /* Array of index blocks of 
-                                                      block_sectors */
-  };
+// struct inode_doubly_indirect_block
+//   {
+//     block_sector_t ibs[128];           Array of index blocks of 
+//                                                       block_sectors 
+//   };
 
 /* On-disk inode.
    Must be exactly BLOCK_SECTOR_SIZE bytes long. */
@@ -31,7 +31,7 @@ struct inode_disk
     struct inode_indirect_block * ib_0;
     block_sector_t ib1_sector;                    /* Second level of indirection, 
                                                     to index block of index blocks */
-    struct inode_doubly_indirect_block * ib_1;
+    struct inode_indirect_block * ib_1;
     off_t length;                                  /* File size in bytes. */
     unsigned magic;                                /* Magic number. */
     uint32_t unused[111];                          /* Not used. */

@@ -56,7 +56,7 @@ void
 free_map_open (void) 
 {
   struct inode *inode_open_result = inode_open (FREE_MAP_SECTOR);
-  printf("inode_open_result length: %d, id: %d\n", inode_open_result->data.length, inode_open_result->data.id);
+  //printf("inode_open_result length: %d, id: %d\n", inode_open_result->data.length, inode_open_result->data.id);
   free_map_file = file_open (inode_open_result);
   if (free_map_file == NULL)
     PANIC ("can't open free map");
