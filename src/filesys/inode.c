@@ -416,21 +416,21 @@ off_t
 inode_write_at (struct inode *inode, const void *buffer_, off_t size,
                 off_t offset) 
 {
-  printf("\nIn inode_write_at\n");
-  printf("\tsize: %d, id: %d, offset: %d\n", size, inode->data.id, offset);
-  int k;
-  printf("start printing arrays inode_write_at:\n");
-  for (k = 0; k < 10; k++) {
-    printf("%d, ", inode->data.start[k]);
-  }
-  printf("\n");
-  for (k = 0; k < 128; k++){
-    if(k % 50 == 0)
-      printf("\n");
-    printf("%d, ", inode->data.ib_0->blocks[k]);
-  }
-  printf("\n");
-  printf("end printing arrays inode_write_at.\n");
+//  printf("\nIn inode_write_at\n");
+//  printf("\tsize: %d, id: %d, offset: %d\n", size, inode->data.id, offset);
+//  int k;
+//  printf("start printing arrays inode_write_at:\n");
+//  for (k = 0; k < 10; k++) {
+//     printf("%d, ", inode->data.start[k]);
+//  }
+//  printf("\n");
+//  for (k = 0; k < 128; k++){
+//     if(k % 50 == 0)
+//       printf("\n");
+//     printf("%d, ", inode->data.ib_0->blocks[k]);
+//  }
+//  printf("\n");
+//  printf("end printing arrays inode_write_at.\n");
   //printf("in inode_write_at\n");
   const uint8_t *buffer = buffer_;
   off_t bytes_written = 0;
