@@ -204,34 +204,8 @@ inode_create (block_sector_t sector, off_t length)
       int i, j;
       block_sector_t * sector_ptr;
       for (i = 0, j = 0; i < sectors; i++, j += BLOCK_SECTOR_SIZE) {
-        int first_index = (i - 138) / 128;
-        //printf("first_index = %d\n", first_index);
         if (i >= 138){
-          //printf("evidently this is a large file\n");
-          int second_index = (i - 138) % 128;
-          struct inode_indirect_block *indirect = calloc (1, sizeof (struct inode_indirect_block));
-          if(!second_index){
-            free_map_allocate(1, &disk_inode->ib_1->blocks[first_index]);
-          }
-          else{
-            //indirect = palloc_get_page(0);
-            //printf("disk_inode->ib_1->blocks[first_index] = %d, first_index = %d, i = %d\n", disk_inode->ib_1->blocks[first_index], first_index, i);
-            block_read(fs_device, disk_inode->ib_1->blocks[first_index], indirect);
-          }
-          free_map_allocate(1, &indirect->blocks[second_index]);
-          static char zeros[BLOCK_SECTOR_SIZE];
-          block_write(fs_device, indirect->blocks[second_index], zeros);
-          block_write(fs_device, disk_inode->ib_1->blocks[first_index], indirect);
-          block_write(fs_device, disk_inode->ib1_sector, disk_inode->ib_1);
-          // int k;
-          // for(k = 0; k < 128; k++){
-          //   if(k%50 == 0)
-          //    //printf\n");
-          //  //printf%d, ",indirect->blocks[k]);
-          // }
-          ////printf\n");
-          // if(indirect != NULL)
-          //free(indirect);
+          set_double_indirect (disk_inode, j);
           success = true;
         }
         else{
