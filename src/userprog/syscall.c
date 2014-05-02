@@ -12,6 +12,7 @@
 #include "devices/shutdown.h"
 #include "devices/input.h"
 #include "userprog/pagedir.h"
+#include "devices/block.h"
 #include <string.h>
 #include <stdarg.h> 
 
@@ -39,6 +40,26 @@ void file_index_increment () {
   t->file_index = index;
 }
 
+bool parse_path(const char *name) {
+  // char **saveptr = NULL; //used for strtok_r
+  // char *temp = NULL;
+  // struct inode *inode = NULL;
+
+  // temp = strtok_r(name, "/", saveptr);
+  // if(*name == '/') {
+  //   if(dir_lookup(dir_open_root(), temp, &inode) == NULL)
+  //     return false;
+  //   t->directory = dir_open(inode);
+  // }
+
+  // while(temp != NULL) {
+  //   if(dir_lookup(t->directory, temp, &inode) == NULL)
+  //     return false;
+  //   t->directory = dir_open(inode); 
+  //   temp = strtok_r(NULL, "/", saveptr));
+  // }
+  // return true;
+}
 
 /* get_arg - a function that dereferences an argument from the stack, checking if it is a valid */ 
 int
@@ -283,6 +304,42 @@ void close (int fd) {
   }
 }
 
+bool chdir(const char *dir) {
+  // struct thread *t = thread_current();
+  // struct inode *inode = NULL;
+  // char *temp = NULL;
+  // char **saveptr = NULL; //used for strtok_r
+
+  // temp = strtok_r(dir, "/", saveptr);
+  // if(*dir == '/') {
+  //   // dir_lookup()
+  // }
+  // dir_lookup (t->directory, temp, &inode);
+  // while((temp = strtok_r(NULL, "/", saveptr)) != NULL) {
+  //   dir_lookup (t->directory, temp, &inode);
+  // }
+}
+
+bool mkdir(const char *dir) {
+  // if(!parse_path(dir)) {
+  //   block_sector_t *sector_idx = calloc(1, sizeof int);
+  //   free_map_allocate(1, sector_idx);
+  //   dir_create(sector_idx, 0); //Size might not be zero
+  // }
+}
+
+bool readdir(int fd, char *name) {
+
+}
+
+bool isdir(int fd) {
+
+}
+
+int inumber(int fd) {
+
+}
+
 static void
 syscall_handler (struct intr_frame *f) 
 {
@@ -388,6 +445,38 @@ syscall_handler (struct intr_frame *f)
     case 12: { //CLOSE
       int fd = get_arg(myesp, false);
       close(fd); // Close a file in file_sys
+      break;
+    }
+
+    case SYS_CHDIR: { 
+      char *dir = (char *)get_arg(myesp, true);
+      f->eax = chdir(dir);
+      break;
+    }
+
+    case SYS_MKDIR: {
+      char *dir = (char *)get_arg(myesp, true);
+      f->eax = mkdir(dir);
+      break;
+    }
+
+    case SYS_READDIR: {
+      int fd = get_arg(myesp, false);
+      myesp++;
+      char *dir = (char *)get_arg(myesp, true);
+      f->eax = readdir(fd, dir);
+      break;
+    }
+      
+    case SYS_ISDIR: {
+      int fd = get_arg(myesp, false);
+      f->eax = isdir(fd);
+      break;
+    }
+
+    case SYS_INUMBER: {
+      int fd = get_arg(myesp, false);
+      f->eax = inumber(fd);
       break;
     }
       

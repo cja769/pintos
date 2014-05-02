@@ -493,6 +493,7 @@ init_thread (struct thread *t, const char *name, int priority)
   memset(t->file_list, -1, 128 * sizeof(int *));
   t->wrap_flag = 0;
   t->io_lock = &io_lock; // Pass a pointer to the main threads io_lock
+  // t->directory = dir_open_root();
 
   sema_init(&t->exec_sema, 0); /* Synchronization semaphore, trying to get syn-read/write to work */
 

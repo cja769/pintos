@@ -100,6 +100,8 @@ struct thread
     int file_index;                     /* Index of last open file */
     int wrap_flag;
 
+    struct dir *directory;               /* Current directory of the thread */
+
   /* Dustin drove here */
     /* Create a list of children as copies to store their status and exit status.
        For each call to wait (pid), loop through children and reap any child whose status
