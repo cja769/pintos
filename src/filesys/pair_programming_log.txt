@@ -1,0 +1,133 @@
+4/16 2:00p - 5:30p Dustin, Jason, Calvin, Samantha 3 hours and 30 minutes
+Drive Order and Time Length:
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+
+4/18 2:00p - 7:00p Dustin, Jason, Calvin, Samantha 5 hours
+Drive Order and Time Length:
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
+
+4/22 1:30p - 3:30p Dustin, Jason, Samantha 2 hours
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Samantha, 30 minutes
+
+4/23 2:00p - 6:00p Dustin, Jason, Samantha 4 hours
+Drive Order and Time Length:
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Dustin, 30 minutes
+Samantha, 30 minutes
+
+4/24 4:00p - 7:00p Dustin, Jason, Samantha, Calvin 3 hours
+Drive Order and Time Length:
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
+Dustin, 30 minutes
+Jason, 30 minutes
+
+4/25 2:00p - 7:00p Dustin, Jason, Samantha, Calvin 5 hours
+Drive Order and Time Length:
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
+Samantha, 30 minutes
+Calvin, 30 minutes
+Jason, 30 minutes
+
+4/28 2:00p - 5:00p Dustin, Jason, Samantha 3 hours
+Drive Order and Time Length:
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+
+4/29 6:00p - 8:00p Jason, Calvin 2 hours
+Drive Order and Time Length:
+Jason, 30 minutes
+Calvin, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
+
+4/30 2:00p - 6:00p Dustin, Jason, Samantha, Calvin 4 hours
+Drive Order and Time Length:
+Calvin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Dustin, 30 minutes
+Calvin, 30 minutes
+
+5/1 3:00p - 7:00p Dustin, Jason, Samantha, Calvin 4 hours
+Drive Order and Time Length:
+Calvin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Dustin, 30 minutes
+Calvin, 30 minutes
+
+5/1 12:00a - 4:00a Calvin, Jason 4 hours
+Drive Order and Time Length:
+Jason, 30 minutes
+Calvin, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
+
+5/2 2:00p - 12:00a Dustin, Jason, Samantha, Calvin 10 hours
+Drive Order and Time Length:
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
+Dustin, 30 minutes
+Samantha, 30 minutes
+Jason, 30 minutes
+Calvin, 30 minutes
