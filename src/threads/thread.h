@@ -101,6 +101,7 @@ struct thread
     int wrap_flag;
 
     struct dir *directory;               /* Current directory of the thread */
+    struct dir *prev_dir;                /* Previous directory of the thread (used for .. in path) */
 
   /* Dustin drove here */
     /* Create a list of children as copies to store their status and exit status.

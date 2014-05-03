@@ -60,20 +60,29 @@ struct dir* parse_path(const char *name, void* buffer) {
      // dir_close(temp_dir);
      // temp_dir = dir_open(inode);
    }
-   else if (t->directory != NULL){
-     set_dir_inode(t->directory);
-     temp_dir = malloc(512);
-     memcpy(temp_dir, t->directory, 512);
-    }
-   else {
-    // printf("NULL\n");
-    temp_dir = dir_open_root();
-    t->directory = malloc(512);
-    memcpy(t->directory, temp_dir, 512);
+   // else if (t->directory != NULL){
+   //   set_dir_inode(t->directory);
+   //   temp_dir = malloc(512);
+   //   memcpy(temp_dir, t->directory, 512);
+   //  }
+   // else {
+   //  //  printf("NULL\n");
+   //  temp_dir = dir_open_root();
+   //  t->directory = malloc(512);
+   //  memcpy(t->directory, temp_dir, 512);
+   //  }
 
-  }
-
+  temp_dir = dir_open_root();
   while(temp != NULL) {
+    if (temp == ".." && t->directory != dir_open_root()) {
+      temp_dir = t->prev_dir == NULL ? dir_open_root() : t->prev_dir;
+      temp = strtok_r(NULL, "/", &saveptr);
+      continue;
+    }
+    else if (temp == ".") {
+      temp = strtok_r(NULL, "/", &saveptr);
+      continue;
+    }
    // printf("temp_dir: %p, temp: %s, inode: %p\n", temp_dir, temp, inode);
    strlcpy(buffer, temp, strlen(temp) + 1);
     if(!dir_lookup(temp_dir, temp, &inode))
@@ -341,6 +350,8 @@ bool chdir(const char *dir) {
 }
 
 bool mkdir(const char *dir) {
+  if(strlen(dir) == 0)
+    return false;
   void* buffer = malloc (strlen(dir)+1);
   struct dir *new_dir = parse_path(dir,buffer);
   bool b = false;
@@ -349,7 +360,11 @@ bool mkdir(const char *dir) {
      free_map_allocate(1, sector_idx);
      b = dir_create(*sector_idx, 0); //Size might not be zero
      struct thread *t = thread_current();
-     b &= dir_add(t->directory, buffer, *sector_idx, true);
+     // if(t->directory == NULL){
+     //   t->directory = malloc(512);
+     //   memcpy(t->directory, dir_open_root(), 512);
+     // }
+     b &= dir_add(dir_open_root(), buffer, *sector_idx, true);
    }
    //printf("b = %d\n",b);
    return b;
