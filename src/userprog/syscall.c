@@ -13,8 +13,10 @@
 #include "devices/input.h"
 #include "userprog/pagedir.h"
 #include "devices/block.h"
+#include "filesys/directory.h"
 #include <string.h>
 #include <stdarg.h> 
+#include "filesys/inode.h"
 
 /* Protoypes */
 void file_index_increment ();
@@ -40,25 +42,47 @@ void file_index_increment () {
   t->file_index = index;
 }
 
-bool parse_path(const char *name) {
-  // char **saveptr = NULL; //used for strtok_r
-  // char *temp = NULL;
-  // struct inode *inode = NULL;
+struct dir* parse_path(const char *name, void* buffer) {
+   char *fn_copy = palloc_get_page(0);
+   strlcpy(fn_copy, name, strlen(name) + 1);
+   struct thread *t = thread_current();
+   struct dir *temp_dir;
+   char *saveptr; //used for strtok_r
+   char *temp = NULL;
+   struct inode *inode = NULL;
+   if(name == NULL)
+    return NULL;
+   temp = strtok_r(fn_copy, "/", &saveptr);
+   if(*name == '/') {
+     temp_dir = dir_open_root();
+     // if(dir_lookup(temp_dir, temp, &inode) == NULL)
+     //   return NULL;
+     // dir_close(temp_dir);
+     // temp_dir = dir_open(inode);
+   }
+   else if (t->directory != NULL){
+     set_dir_inode(t->directory);
+     temp_dir = malloc(512);
+     memcpy(temp_dir, t->directory, 512);
+    }
+   else {
+    // printf("NULL\n");
+    temp_dir = dir_open_root();
+    t->directory = malloc(512);
+    memcpy(t->directory, temp_dir, 512);
 
-  // temp = strtok_r(name, "/", saveptr);
-  // if(*name == '/') {
-  //   if(dir_lookup(dir_open_root(), temp, &inode) == NULL)
-  //     return false;
-  //   t->directory = dir_open(inode);
-  // }
+  }
 
-  // while(temp != NULL) {
-  //   if(dir_lookup(t->directory, temp, &inode) == NULL)
-  //     return false;
-  //   t->directory = dir_open(inode); 
-  //   temp = strtok_r(NULL, "/", saveptr));
-  // }
-  // return true;
+  while(temp != NULL) {
+   // printf("temp_dir: %p, temp: %s, inode: %p\n", temp_dir, temp, inode);
+   strlcpy(buffer, temp, strlen(temp) + 1);
+    if(!dir_lookup(temp_dir, temp, &inode))
+      return NULL;
+    dir_close(temp_dir);
+    temp_dir = dir_open(inode); 
+    temp = strtok_r(NULL, "/", &saveptr);
+  }
+  return temp_dir;
 }
 
 /* get_arg - a function that dereferences an argument from the stack, checking if it is a valid */ 
@@ -305,27 +329,30 @@ void close (int fd) {
 }
 
 bool chdir(const char *dir) {
-  // struct thread *t = thread_current();
-  // struct inode *inode = NULL;
-  // char *temp = NULL;
-  // char **saveptr = NULL; //used for strtok_r
-
-  // temp = strtok_r(dir, "/", saveptr);
-  // if(*dir == '/') {
-  //   // dir_lookup()
-  // }
-  // dir_lookup (t->directory, temp, &inode);
-  // while((temp = strtok_r(NULL, "/", saveptr)) != NULL) {
-  //   dir_lookup (t->directory, temp, &inode);
-  // }
+  struct thread *t = thread_current();
+  void* buffer = malloc (strlen(dir)+1);
+  struct dir *new_dir = parse_path(dir,buffer);
+  if(new_dir != NULL) {
+    dir_close(t->directory);
+    t->directory = new_dir;
+    return true;
+  }
+  return false;
 }
 
 bool mkdir(const char *dir) {
-  // if(!parse_path(dir)) {
-  //   block_sector_t *sector_idx = calloc(1, sizeof int);
-  //   free_map_allocate(1, sector_idx);
-  //   dir_create(sector_idx, 0); //Size might not be zero
-  // }
+  void* buffer = malloc (strlen(dir)+1);
+  struct dir *new_dir = parse_path(dir,buffer);
+  bool b = false;
+   if(new_dir == NULL) {
+     block_sector_t *sector_idx = calloc(1, sizeof (int));
+     free_map_allocate(1, sector_idx);
+     b = dir_create(*sector_idx, 0); //Size might not be zero
+     struct thread *t = thread_current();
+     b &= dir_add(t->directory, buffer, *sector_idx, true);
+   }
+   //printf("b = %d\n",b);
+   return b;
 }
 
 bool readdir(int fd, char *name) {

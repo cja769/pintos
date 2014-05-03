@@ -74,6 +74,11 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
+struct thread *
+get_initial_thread(void) {
+  return initial_thread;
+}
+
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -493,8 +498,7 @@ init_thread (struct thread *t, const char *name, int priority)
   memset(t->file_list, -1, 128 * sizeof(int *));
   t->wrap_flag = 0;
   t->io_lock = &io_lock; // Pass a pointer to the main threads io_lock
-  // t->directory = dir_open_root();
-
+  t->directory = NULL;
   sema_init(&t->exec_sema, 0); /* Synchronization semaphore, trying to get syn-read/write to work */
 
   list_push_back (&all_list, &t->allelem);

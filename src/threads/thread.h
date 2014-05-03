@@ -136,6 +136,7 @@ struct thread
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
 
+struct thread *get_initial_thread(void);
 struct thread *thread_get(tid_t tid);
 
 void thread_init (void);

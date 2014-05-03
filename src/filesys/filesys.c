@@ -6,6 +6,8 @@
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
 #include "filesys/directory.h"
+#include "threads/thread.h"
+#include "threads/malloc.h"
 
 /* Partition that contains the file system. */
 struct block *fs_device;
@@ -27,7 +29,10 @@ filesys_init (bool format)
   if (format) 
     do_format ();
 
-  free_map_open ();
+  free_map_open (); 
+
+  //Set directory for initial thread
+  get_initial_thread()->directory = NULL;
 }
 
 /* Shuts down the file system module, writing any unwritten data
@@ -46,11 +51,20 @@ bool
 filesys_create (const char *name, off_t initial_size) 
 {
   block_sector_t inode_sector = 0;
-  struct dir *dir = dir_open_root ();
+  struct thread* t = thread_current();
+  if(t->directory == NULL){
+    // printf("NULL\n");
+    t->directory = malloc(512);
+    memcpy(t->directory, dir_open_root(), 512);
+  }
+  else
+    set_dir_inode(t->directory);
+  struct dir *dir = malloc(512);
+  memcpy(dir, t->directory, 512);
   bool success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
                   && inode_create (inode_sector, initial_size)
-                  && dir_add (dir, name, inode_sector));
+                  && dir_add (dir, name, inode_sector, false));
   if (!success && inode_sector != 0) 
     free_map_release (inode_sector, 1);
   dir_close (dir);

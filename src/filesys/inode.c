@@ -123,7 +123,6 @@ static block_sector_t
 get_sector (struct inode_disk *inode_disk, off_t pos)
 {
   block_sector_t * ptr = get_ptr_for_sector(inode_disk, pos);
-  //printf("index pointer: %p, sector: %d\n", ptr, *ptr);
   if (ptr != -1) 
     return *ptr;
   else

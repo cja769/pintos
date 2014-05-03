@@ -6,11 +6,13 @@
 #include "filesys/inode.h"
 #include "threads/malloc.h"
 
+
 /* A directory. */
 struct dir 
   {
     struct inode *inode;                /* Backing store. */
-    off_t pos;                          /* Current position. */
+    off_t pos;   
+    block_sector_t sector;                       /* Current position. */
   };
 
 /* A single directory entry. */
@@ -19,6 +21,8 @@ struct dir_entry
     block_sector_t inode_sector;        /* Sector number of header. */
     char name[NAME_MAX + 1];            /* Null terminated file name. */
     bool in_use;                        /* In use or free? */
+    bool is_directory;
+
   };
 
 /* Creates a directory with space for ENTRY_CNT entries in the
@@ -39,6 +43,7 @@ dir_open (struct inode *inode)
     {
       dir->inode = inode;
       dir->pos = 0;
+      dir->sector = inode->sector;
       return dir;
     }
   else
@@ -71,6 +76,11 @@ dir_close (struct dir *dir)
 {
   if (dir != NULL)
     {
+      //if(dir == dir_open_root())
+        //printf("root directory\n");
+      //printf("dir sector = %d, dir inode name = %d\n",dir->inode->sector,dir->inode->data.id);
+      //printf("t sector = %d\n",dir->inode->sector);
+      dir->sector = dir->inode->sector;
       inode_close (dir->inode);
       free (dir);
     }
@@ -81,6 +91,11 @@ struct inode *
 dir_get_inode (struct dir *dir) 
 {
   return dir->inode;
+}
+
+void
+set_dir_inode (struct dir *dir){
+  dir->inode = inode_open(dir->sector);
 }
 
 /* Searches DIR for a file with the given NAME.
@@ -97,7 +112,6 @@ lookup (const struct dir *dir, const char *name,
   
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
-
   for (ofs = 0; inode_read_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
        ofs += sizeof e) 
     if (e.in_use && !strcmp (name, e.name)) 
@@ -139,7 +153,7 @@ dir_lookup (const struct dir *dir, const char *name,
    Fails if NAME is invalid (i.e. too long) or a disk or memory
    error occurs. */
 bool
-dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
+dir_add (struct dir *dir, const char *name, block_sector_t inode_sector, bool directory)
 {
   struct dir_entry e;
   off_t ofs;
@@ -170,6 +184,7 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
 
   /* Write slot. */
   e.in_use = true;
+  e.is_directory = directory;
   strlcpy (e.name, name, sizeof e.name);
   e.inode_sector = inode_sector;
   success = inode_write_at (dir->inode, &e, sizeof e, ofs) == sizeof e;

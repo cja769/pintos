@@ -10,6 +10,7 @@ typedef int pid_t;
 /* Method prototypes for syscall.c and Pintos sys_calls,
    copied from project description */
 int get_arg (int *esp, bool is_pointer);
+struct dir* parse_path(const char *name, void* buffer);
 void syscall_init (void);
 void halt (void);
 void exit (int status);

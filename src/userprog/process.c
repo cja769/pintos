@@ -64,6 +64,8 @@ process_execute (const char *file_name)
     arguments->argc++; // Increment the number of args
   }  
 
+  t->directory = dir_open_root();
+
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, arguments);
   /* The parent thread running this method will wait for exec to finish
